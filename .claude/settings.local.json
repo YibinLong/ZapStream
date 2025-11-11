@@ -5,7 +5,8 @@
       "Bash(export AWS_ACCESS_KEY_ID=AKIA6ELKOKYDOMBQOJPA)",
       "Bash(export AWS_SECRET_ACCESS_KEY:*)",
       "Bash(export:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []
