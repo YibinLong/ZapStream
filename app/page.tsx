@@ -12,13 +12,14 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <NavHeader />
 
-      <main className="container px-6 py-8">
+      <div className="flex min-h-screen flex-col">
+        <main className="flex-1 w-full min-w-0 px-4 sm:px-6 lg:px-8 py-8 max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="mb-12 text-center animate-slide-up">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-balance bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-primary">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-balance bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-primary">
             Real-time Event Management
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-balance">
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto text-balance px-4 sm:px-0">
             {"Monitor, manage, and deliver events at scale with enterprise-grade reliability"}
           </p>
         </div>
@@ -86,9 +87,10 @@ export default function HomePage() {
             <ApiPlayground />
           </TabsContent>
         </Tabs>
-      </main>
+        </main>
 
-      <Footer />
+        <Footer />
+      </div>
     </div>
   )
 }
