@@ -42,6 +42,11 @@ jobs:
 
     - name: Deploy to S3
       run: |
+        echo "📁 Checking current directory contents:"
+        ls -la
+        echo "📁 Checking if out/ directory exists:"
+        ls -la out/ || echo "out/ directory not found"
+        echo "🚀 Starting deployment to S3..."
         aws s3 sync out/ s3://zapstream-app-1762821749 --delete
         echo "✅ Deployment completed successfully!"
 
