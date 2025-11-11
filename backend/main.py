@@ -7,12 +7,28 @@ from typing import Dict
 
 from .logging import setup_logging
 from .config import get_settings
+from .storage import get_storage_backend
 
 logger = setup_logging()
 settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize storage backend
+    logger.info("Initializing storage backend...")
+    try:
+        storage = get_storage_backend()
+        app.state.storage = storage
+        logger.info(f"Storage backend initialized: {settings.storage_backend}")
+
+        # Initialize database tables
+        await storage.initialize()
+        logger.info("Database tables created")
+
+    except Exception as e:
+        logger.error(f"Failed to initialize storage backend: {e}")
+        raise
+
     logger.info("FastAPI application starting up...")
     yield
     logger.info("FastAPI application shutting down...")
@@ -44,17 +60,9 @@ async def add_request_id(request, call_next):
 
     return response
 
-@app.get("/health")
-async def health_check():
-    """
-    Health check endpoint for monitoring and load balancers.
-    Returns 200 OK when the service is healthy.
-    """
-    return {
-        "status": "healthy",
-        "service": "Zapier Triggers API",
-        "version": "1.0.0"
-    }
+# Include API routes
+from .routes import api_router
+app.include_router(api_router)
 
 @app.get("/")
 async def root():
@@ -65,7 +73,10 @@ async def root():
         "message": "Zapier Triggers API",
         "version": "1.0.0",
         "docs": "/docs",
-        "health": "/health"
+        "redoc": "/redoc",
+        "health": "/health",
+        "events": "/events",
+        "inbox": "/inbox"
     }
 
 if __name__ == "__main__":
