@@ -51,89 +51,118 @@
 
 ---
 
-## PHASE 4: Event Ingestion API (POST /events) ⬜
+## PHASE 4: Event Ingestion API (POST /events) ✅
 
-### Epic 4.1: Accept, validate, and persist events ⬜
+### Epic 4.1: Accept, validate, and persist events ✅
 
 **Story:** Validate payload, enforce size, idempotency, and write to storage
 
-- ⬜ Task 4.1.1: Define request/response models; validate payload is JSON object and ≤ `MAX_PAYLOAD_BYTES`
-- ⬜ Task 4.1.2: Implement `POST /events` creating pending event with `delivered=false` and `status=pending`
-- ⬜ Task 4.1.3: Support `X-Idempotency-Key`; return existing event ID for duplicates (409 semantics per PRD)
-- ⬜ Task 4.1.4: Implement in-memory rate limit per API key (`RATE_LIMIT_PER_MINUTE`), return 429 with `Retry-After`
+- ✅ Task 4.1.1: Define request/response models; validate payload is JSON object and ≤ `MAX_PAYLOAD_BYTES`
+- ✅ Task 4.1.2: Implement `POST /events` creating pending event with `delivered=false` and `status=pending`
+- ✅ Task 4.1.3: Support `X-Idempotency-Key`; return existing event ID for duplicates (409 semantics per PRD)
+- ✅ Task 4.1.4: Implement in-memory rate limit per API key (`RATE_LIMIT_PER_MINUTE`), return 429 with `Retry-After`
 
-**Acceptance:** Returns 200 with `{ id, receivedAt, status: "accepted" }`; duplicate idempotency returns existing event; 400/401/409/429 handled as specified.
+**Acceptance:** Returns 200 with `{ id, receivedAt, status: "accepted" }`; duplicate idempotency returns existing event; 400/401/409/429 handled as specified. ✅
 
 ---
 
-## PHASE 5: Inbox API (GET /inbox, ACK, DELETE) ⬜
+## PHASE 5: Inbox API (GET /inbox, ACK, DELETE) ✅
 
-### Epic 5.1: List undelivered events with filters and pagination ⬜
+### Epic 5.1: List undelivered events with filters and pagination ✅
 
 **Story:** Pull-based inbox for pending events
 
-- ⬜ Task 5.1.1: Implement `GET /inbox` with query params: `limit` (default 50, max 500), `since` (ISO), `topic`, `type`
-- ⬜ Task 5.1.2: Order by `createdAt` ASC and return `nextCursor` (encode `createdAt|id`)
-- ⬜ Task 5.1.3: Validate query params and return 400 for invalid values
+- ✅ Task 5.1.1: Implement `GET /inbox` with query params: `limit` (default 50, max 500), `since` (ISO), `topic`, `type`
+- ✅ Task 5.1.2: Order by `createdAt` ASC and return `nextCursor` (encode `createdAt|id`)
+- ✅ Task 5.1.3: Validate query params and return 400 for invalid values
 
-### Epic 5.2: Acknowledge and delete events ⬜
+### Epic 5.2: Acknowledge and delete events ✅
 
 **Story:** Mark events delivered or delete to prevent duplicates
 
-- ⬜ Task 5.2.1: Implement `POST /inbox/{id}/ack` (idempotent) setting `delivered=true`, `status=acknowledged`
-- ⬜ Task 5.2.2: Implement `DELETE /inbox/{id}` (hard delete in SQLite; soft-delete optional)
-- ⬜ Task 5.2.3: Enforce tenant ownership; return 404 if not found; 409 for invalid state transitions
+- ✅ Task 5.2.1: Implement `POST /inbox/{id}/ack` (idempotent) setting `delivered=true`, `status=acknowledged`
+- ✅ Task 5.2.2: Implement `DELETE /inbox/{id}` (hard delete in SQLite; soft-delete optional)
+- ✅ Task 5.2.3: Enforce tenant ownership; return 404 if not found; 409 for invalid state transitions
 
-**Acceptance:** Clients can list pending events, page via cursor, ack or delete by id with correct tenancy and state checks.
+**Acceptance:** Clients can list pending events, page via cursor, ack or delete by id with correct tenancy and state checks. ✅
 
 ---
 
-## PHASE 6: Observability & Error Handling ⬜
+## PHASE 6: Observability & Error Handling ✅
 
-### Epic 6.1: Structured logging and request tracing ⬜
+### Epic 6.1: Structured logging and request tracing ✅
 
 **Story:** JSON logs with correlation and tenant context
 
-- ⬜ Task 6.1.1: Configure structured JSON logging with `LOG_LEVEL`/`DEBUG`
-- ⬜ Task 6.1.2: Add requestId middleware; include `X-Request-ID` in responses
-- ⬜ Task 6.1.3: Include `tenantId` when available in logs; avoid logging secrets
+- ✅ Task 6.1.1: Configure structured JSON logging with `LOG_LEVEL`/`DEBUG`
+- ✅ Task 6.1.2: Add requestId middleware; include `X-Request-ID` in responses
+- ✅ Task 6.1.3: Include `tenantId` when available in logs; avoid logging secrets
 
-### Epic 6.2: Consistent error responses ⬜
+### Epic 6.2: Consistent error responses ✅
 
 **Story:** Standard error envelope per PRD appendix
 
-- ⬜ Task 6.2.1: Implement error handlers returning
+- ✅ Task 6.2.1: Implement error handlers returning
   `{ "error": { "code": ..., "message": ..., "requestId": ... } }`
 
-**Acceptance:** Logs are structured and include requestId/tenantId; errors follow the documented schema.
+**Acceptance:** Logs are structured and include requestId/tenantId; errors follow the documented schema. ✅
 
 ---
 
-## PHASE 7: Testing & Quality ⬜
+## PHASE 7: Testing & Quality ✅
 
-### Epic 7.1: Unit and API tests ⬜
+### Epic 7.1: Unit and API tests ✅
 
 **Story:** Validate endpoints, auth, idempotency, and limits
 
-- ⬜ Task 7.1.1: Set up pytest/httpx test harness
-- ⬜ Task 7.1.2: Unit tests: schema validation, auth middleware, idempotency logic
-- ⬜ Task 7.1.3: API tests: `POST /events` (happy path, invalid JSON, 401, 409), `GET /inbox`, ack/delete
-- ⬜ Task 7.1.4: Concurrency tests for idempotent POST with same key
-- ⬜ Task 7.1.5: Rate limit tests expecting 429 with `Retry-After`
-- ⬜ Task 7.1.6: Add basic coverage threshold
+- ✅ Task 7.1.1: Set up pytest/httpx test harness
+- ✅ Task 7.1.2: Unit tests: schema validation, auth middleware, idempotency logic
+- ✅ Task 7.1.3: API tests: `POST /events` (happy path, invalid JSON, 401, 409), `GET /inbox`, ack/delete
+- ✅ Task 7.1.4: Concurrency tests for idempotent POST with same key
+- ✅ Task 7.1.5: Rate limit tests expecting 429 with `Retry-After`
+- ✅ Task 7.1.6: Add basic coverage threshold (80%)
 
-**Acceptance:** All tests pass locally; coverage threshold met.
+**Acceptance:** All tests pass locally; coverage threshold met. ✅
 
 ---
 
-## PHASE 8: Developer Experience ⬜
+## PHASE 8: Frontend-Backend Integration ⬜
 
-### Epic 8.1: Scripts and docs for local dev ⬜
+### Epic 8.1: Connect Frontend to Real Backend Data ⬜
+
+**Story:** Replace mock data in frontend dashboard with real API data
+
+- ⬜ Task 8.1.1: Update Event Stream component to fetch real events from `/inbox` API endpoint
+- ⬜ Task 8.1.2: Replace mock statistics cards with real data calculations (event count, success rate, response time)
+- ⬜ Task 8.1.3: Implement real-time polling or WebSocket for live event updates
+- ⬜ Task 8.1.4: Add API Playground functionality to actually test backend endpoints from UI
+- ⬜ Task 8.1.5: Implement proper error handling for API calls (loading states, error messages, retry logic)
+- ⬜ Task 8.1.6: Update System Status panel to show real backend connectivity status
+
+**Acceptance:** Dashboard displays live data from backend API; new events appear automatically; API Playground successfully calls backend.
+
+### Epic 8.2: Real-time Features ⬜
+
+**Story:** Add live event streaming and notifications
+
+- ⬜ Task 8.2.1: Implement WebSocket or Server-Sent Events for real-time event updates
+- ⬜ Task 8.2.2: Add event creation form in frontend Playground tab
+- ⬜ Task 8.2.3: Add event acknowledgment and deletion UI in dashboard
+- ⬜ Task 8.2.4: Implement real-time statistics updates when events are created/updated
+- ⬜ Task 8.2.5: Add notification system for new events and system alerts
+
+**Acceptance:** Users can create, acknowledge, and delete events from frontend; all updates appear in real-time without page refresh.
+
+---
+
+## PHASE 9: Developer Experience ⬜
+
+### Epic 9.1: Scripts and docs for local dev ⬜
 
 **Story:** Make local iteration fast and predictable
 
-- ⬜ Task 8.1.1: Provide Makefile targets (`dev`, `test`, optionally `lint`)
-- ⬜ Task 8.1.2: Ensure `.env.example` + quickstart steps are discoverable alongside the backend
+- ⬜ Task 9.1.1: Provide Makefile targets (`dev`, `test`, optionally `lint`)
+- ⬜ Task 9.1.2: Ensure `.env.example` + quickstart steps are discoverable alongside the backend
 
 **Acceptance:** One command to run server with reload; one command to run tests; env config is clear.
 

@@ -270,3 +270,10 @@ class SQLiteStorage(StorageInterface):
                 return True
         except Exception:
             return False
+
+    async def close(self) -> None:
+        """Close the database engine and cleanup resources."""
+        if hasattr(self, 'engine') and self.engine:
+            await self.engine.dispose()
+        if hasattr(self, 'sync_engine') and self.sync_engine:
+            self.sync_engine.dispose()

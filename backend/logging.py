@@ -32,6 +32,18 @@ class CustomJSONFormatter(jsonlogger.JsonFormatter):
         log_record['function'] = record.funcName
         log_record['line'] = record.lineno
 
+        # Add request context if available (from extra dict)
+        if hasattr(record, 'request_id'):
+            log_record['requestId'] = record.request_id
+        if hasattr(record, 'tenant_id'):
+            log_record['tenantId'] = record.tenant_id
+        if hasattr(record, 'path'):
+            log_record['path'] = record.path
+        if hasattr(record, 'method'):
+            log_record['method'] = record.method
+        if hasattr(record, 'status_code'):
+            log_record['statusCode'] = record.status_code
+
 
 def setup_logging() -> logging.Logger:
     """Configure structured JSON logging for the application."""

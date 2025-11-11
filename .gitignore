@@ -71,3 +71,33 @@ coverage.xml
 
 # Local data
 data/
+
+# Additional virtual environments
+.venv_lambda/
+.venv_minimal/
+
+# Lambda build artifacts and packages
+lambda*.zip
+package/
+package_minimal/
+package_optimized/
+package_simple/
+package_simple_final/
+package_simple_updated/
+
+# Python packaging artifacts
+=*/
+
+# Test configuration (optional - remove if you want to commit this)
+pytest.ini
+
+# Additional Python requirements files (keep only main requirements.txt)
+requirements_*.txt
+!requirements.txt
+
+# TypeScript build outputs in CDK
+cdk/lib/*.d.ts
+cdk/lib/*.js
+
+# Build artifacts
+lambda.zip
