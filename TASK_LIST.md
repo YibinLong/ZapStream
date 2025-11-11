@@ -4,20 +4,20 @@
 
 ---
 
-## PHASE 1: Backend Project Setup ⬜
+## PHASE 1: Backend Project Setup ✅
 
-### Epic 1.1: Initialize FastAPI app and local environment ⬜
+### Epic 1.1: Initialize FastAPI app and local environment ✅
 
 **Story:** Bootstrap Python project, config loading, and CORS
 
-- ⬜ Task 1.1.1: Create backend structure `app/` (`main.py`, `models.py`, `auth.py`, `rate_limit.py`, `logging.py`, `storage/{base.py,sqlite.py,dynamodb.py}`)
-- ⬜ Task 1.1.2: Add `requirements.txt` (FastAPI, Uvicorn, SQLModel, pydantic, httpx, pytest, boto3, structlog or python-json-logger)
-- ⬜ Task 1.1.3: Add `.gitignore` entries for Python, env, and `data/` as per PRD
-- ⬜ Task 1.1.4: Add `.env.example` with all variables from PRD and load config in code
-- ⬜ Task 1.1.5: Implement `app/main.py` with FastAPI instance, CORS from `CORS_ALLOWED_ORIGINS`, and health route
-- ⬜ Task 1.1.6: Add dev command (Makefile `dev` or shell script) to run `uvicorn app.main:app --reload --port ${PORT:-8000}`
+- ✅ Task 1.1.1: Create backend structure `backend/` (`main.py`, `models.py`, `auth.py`, `rate_limit.py`, `logging.py`, `storage/{base.py,sqlite.py,dynamodb.py}`)
+- ✅ Task 1.1.2: Add `requirements.txt` (FastAPI, Uvicorn, SQLModel, pydantic, httpx, pytest, boto3, structlog or python-json-logger)
+- ✅ Task 1.1.3: Add `.gitignore` entries for Python, env, and `data/` as per PRD
+- ✅ Task 1.1.4: Add `.env.example` with all variables from PRD and load config in code
+- ✅ Task 1.1.5: Implement `backend/main.py` with FastAPI instance, CORS from `CORS_ALLOWED_ORIGINS`, and health route
+- ✅ Task 1.1.6: Add dev command (Makefile `dev` or shell script) to run `uvicorn backend.main:app --reload --port ${BACKEND_PORT:-8000}`
 
-**Acceptance:** Local server starts on port 8000 with CORS enabled and a health endpoint returning 200.
+**Acceptance:** Local server starts on port 8000 with CORS enabled and a health endpoint returning 200. ✅
 
 ---
 
