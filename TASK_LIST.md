@@ -21,33 +21,33 @@
 
 ---
 
-## PHASE 2: Storage Abstraction ⬜
+## PHASE 2: Storage Abstraction ✅
 
-### Epic 2.1: Define models and storage interface ⬜
+### Epic 2.1: Define models and storage interface ✅
 
 **Story:** Represent events and abstract storage for SQLite (local) and DynamoDB (prod)
 
-- ⬜ Task 2.1.1: Define Pydantic/SQLModel models (Event schema with fields per PRD)
-- ⬜ Task 2.1.2: Create `storage/base.py` interface (create_event, get_pending, ack_event, delete_event, get_event_by_id, get_by_idempotency)
-- ⬜ Task 2.1.3: Implement `storage/sqlite.py` with SQLModel + SQLite at `./data/events.db`
-- ⬜ Task 2.1.4: Implement optional `storage/dynamodb.py` skeleton (behind env flag; not required for local dev)
+- ✅ Task 2.1.1: Define Pydantic/SQLModel models (Event schema with fields per PRD)
+- ✅ Task 2.1.2: Create `storage/base.py` interface (create_event, get_pending, ack_event, delete_event, get_event_by_id, get_by_idempotency)
+- ✅ Task 2.1.3: Implement `storage/sqlite.py` with SQLModel + SQLite at `./data/events.db`
+- ✅ Task 2.1.4: Implement optional `storage/dynamodb.py` skeleton (behind env flag; not required for local dev)
 
-**Acceptance:** SQLite works locally: can insert, list pending, ack, and delete events; idempotency lookup returns existing event when applicable.
+**Acceptance:** SQLite works locally: can insert, list pending, ack, and delete events; idempotency lookup returns existing event when applicable. ✅
 
 ---
 
-## PHASE 3: Auth & Multi‑Tenancy ⬜
+## PHASE 3: Auth & Multi‑Tenancy ✅
 
-### Epic 3.1: API key parsing and tenant scoping ⬜
+### Epic 3.1: API key parsing and tenant scoping ✅
 
 **Story:** Extract API key from headers and map to tenant
 
-- ⬜ Task 3.1.1: Parse `Authorization: Bearer` or `X-API-Key` header
-- ⬜ Task 3.1.2: Map API key → `tenantId` from `API_KEYS` env (comma-separated `key=tenant` pairs)
-- ⬜ Task 3.1.3: Attach `tenantId` to request context (dependency/middleware)
-- ⬜ Task 3.1.4: Return 401 for missing/invalid key
+- ✅ Task 3.1.1: Parse `Authorization: Bearer` or `X-API-Key` header
+- ✅ Task 3.1.2: Map API key → `tenantId` from `API_KEYS` env (comma-separated `key=tenant` pairs)
+- ✅ Task 3.1.3: Attach `tenantId` to request context (dependency/middleware)
+- ✅ Task 3.1.4: Return 401 for missing/invalid key
 
-**Acceptance:** Requests without a valid API key receive 401; downstream handlers can read `tenantId` from context.
+**Acceptance:** Requests without a valid API key receive 401; downstream handlers can read `tenantId` from context. ✅
 
 ---
 

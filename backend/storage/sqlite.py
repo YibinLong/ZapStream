@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from sqlmodel import create_engine, Session, select, and_, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel.ext.asyncio.session import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from ..models import Event, EventStatus
@@ -23,16 +23,15 @@ class SQLiteStorage(StorageInterface):
 
     def __init__(self):
         """Initialize SQLite storage with database connection."""
-        self.database_url = settings.database_url
+        # Use a fixed absolute path for the database
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        db_path = os.path.join(current_dir, 'data', 'events.db')
 
         # Ensure data directory exists
-        parsed_url = urlparse(self.database_url)
-        if parsed_url.scheme == "sqlite" or parsed_url.path:
-            db_path = parsed_url.path
-            if db_path:
-                db_dir = os.path.dirname(db_path)
-                if db_dir:
-                    os.makedirs(db_dir, exist_ok=True)
+        db_dir = os.path.dirname(db_path)
+        os.makedirs(db_dir, exist_ok=True)
+
+        self.database_url = f"sqlite:///{db_path}"
 
         # Create async engine
         async_url = self.database_url.replace("sqlite:///", "sqlite+aiosqlite:///")
