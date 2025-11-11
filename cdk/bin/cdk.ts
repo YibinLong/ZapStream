@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { ZapStreamPipelineStack } from '../lib/zapstream-pipeline-stack';
-import { ZapStreamBackendStack } from '../lib/zapstream-backend-stack';
+import { ZapStreamServerlessStack } from '../lib/zapstream-serverless-stack';
 
 const app = new cdk.App();
 
@@ -13,8 +13,8 @@ new ZapStreamPipelineStack(app, 'ZapStreamPipelineStack', {
   },
 });
 
-// Backend infrastructure
-new ZapStreamBackendStack(app, 'ZapStreamBackendStack', {
+// Serverless Backend infrastructure (no Docker required)
+new ZapStreamServerlessStack(app, 'ZapStreamServerlessStack', {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION,

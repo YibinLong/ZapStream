@@ -6,7 +6,9 @@
       "Bash(export AWS_SECRET_ACCESS_KEY:*)",
       "Bash(export:*)",
       "Bash(npm install:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs"
     ],
     "deny": [],
     "ask": []
