@@ -1,0 +1,59 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Frontend
+node_modules/
+out/
+.next/
+public/
+
+# CDK
+cdk/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.venv/
+venv/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Cache
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+htmlcov/
+
+# Data (will be created in container)
+data/
+*.sqlite
+*.db
+
+# Tests
+tests/
