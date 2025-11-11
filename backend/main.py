@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 import os
 import uuid
 from contextlib import asynccontextmanager
@@ -8,6 +9,12 @@ from typing import Dict
 from .logging import setup_logging
 from .config import get_settings
 from .storage import get_storage_backend
+from .error_handlers import (
+    zapstream_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+    general_exception_handler
+)
 
 logger = setup_logging()
 settings = get_settings()
@@ -49,16 +56,53 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Request ID middleware
+# Request logging and context middleware
 @app.middleware("http")
-async def add_request_id(request, call_next):
+async def add_request_context(request, call_next):
     request_id = str(uuid.uuid4())
     request.state.request_id = request_id
 
+    # Extract tenant_id from request if available (after auth middleware runs)
+    tenant_id = None
+    if hasattr(request.state, 'tenant_id'):
+        tenant_id = request.state.tenant_id
+
+    # Log request start
+    logger.info(
+        "Request started",
+        extra={
+            'request_id': request_id,
+            'tenant_id': tenant_id,
+            'path': request.url.path,
+            'method': request.method,
+        }
+    )
+
     response = await call_next(request)
+
+    # Add request ID to response headers
     response.headers["X-Request-ID"] = request_id
 
+    # Log request completion
+    logger.info(
+        "Request completed",
+        extra={
+            'request_id': request_id,
+            'tenant_id': tenant_id,
+            'path': request.url.path,
+            'method': request.method,
+            'status_code': response.status_code,
+        }
+    )
+
     return response
+
+# Register exception handlers
+from .error_handlers import ZapStreamException
+
+app.add_exception_handler(ZapStreamException, zapstream_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
 
 # Include API routes
 from .routes import api_router

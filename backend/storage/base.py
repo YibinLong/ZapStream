@@ -9,6 +9,20 @@ class StorageInterface(ABC):
     """Abstract interface for event storage implementations."""
 
     @abstractmethod
+    async def initialize(self) -> None:
+        """
+        Initialize the storage backend (create tables, etc.).
+        """
+        pass
+
+    @abstractmethod
+    async def close(self) -> None:
+        """
+        Close the storage backend and cleanup resources.
+        """
+        pass
+
+    @abstractmethod
     async def create_event(
         self,
         tenant_id: str,
