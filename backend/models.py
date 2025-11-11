@@ -5,6 +5,8 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, ConfigDict
 from sqlmodel import SQLModel, Field as SQLField
+from sqlalchemy import Column, JSON
+from sqlalchemy.types import JSON as SQLAlchemyJSON
 
 
 class EventStatus(str, Enum):
@@ -16,26 +18,39 @@ class EventStatus(str, Enum):
 
 class EventBase(SQLModel):
     """Base Event model with common fields."""
-    tenant_id: str = SQLField(index=True, description="Tenant identifier")
-    source: Optional[str] = SQLField(default=None, description="Event source (e.g., 'billing')")
-    type: Optional[str] = SQLField(default=None, description="Event type (e.g., 'invoice.paid')")
-    topic: Optional[str] = SQLField(default=None, description="Event topic (e.g., 'finance')")
-    payload: Dict[str, Any] = SQLField(description="JSON payload containing event data")
-    delivered: bool = SQLField(default=False, description="Whether event has been delivered")
-    status: EventStatus = SQLField(default=EventStatus.PENDING, description="Event processing status")
-    idempotency_key: Optional[str] = SQLField(
+    tenant_id: str = Field(index=True, description="Tenant identifier")
+    source: Optional[str] = Field(default=None, description="Event source (e.g., 'billing')")
+    type: Optional[str] = Field(default=None, description="Event type (e.g., 'invoice.paid')")
+    topic: Optional[str] = Field(default=None, description="Event topic (e.g., 'finance')")
+    payload: Optional[Dict[str, Any]] = Field(default=None, description="JSON payload containing event data")
+    delivered: bool = Field(default=False, description="Whether event has been delivered")
+    status: EventStatus = Field(default=EventStatus.PENDING, description="Event processing status")
+    idempotency_key: Optional[str] = Field(
         default=None,
-        index=True,
         description="Optional idempotency key for safe retries"
     )
 
 
 class Event(EventBase, table=True):
     """Event database model."""
+    __tablename__ = "events"
+
     id: str = SQLField(
         default_factory=lambda: str(uuid.uuid4()),
         primary_key=True,
         description="Unique event identifier"
+    )
+    tenant_id: str = SQLField(index=True, description="Tenant identifier")
+    source: Optional[str] = SQLField(default=None, description="Event source (e.g., 'billing')")
+    type: Optional[str] = SQLField(default=None, description="Event type (e.g., 'invoice.paid')")
+    topic: Optional[str] = SQLField(default=None, description="Event topic (e.g., 'finance')")
+    payload: Optional[Dict[str, Any]] = SQLField(default=None, sa_column=Column(JSON), description="JSON payload containing event data")
+    delivered: bool = SQLField(default=False, description="Whether event has been delivered")
+    status: EventStatus = SQLField(default=EventStatus.PENDING, description="Event processing status")
+    idempotency_key: Optional[str] = SQLField(
+        default=None,
+        index=True,
+        description="Optional idempotency key for safe retries"
     )
     created_at: datetime = SQLField(
         default_factory=datetime.utcnow,
