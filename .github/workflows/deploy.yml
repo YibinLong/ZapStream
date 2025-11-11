@@ -46,6 +46,12 @@ jobs:
         ls -la
         echo "📁 Checking if out/ directory exists:"
         ls -la out/ || echo "out/ directory not found"
+        echo "📁 Checking if .next directory exists:"
+        ls -la .next/ || echo ".next directory not found"
+        echo "🚀 Manually creating static export..."
+        npx next export
+        echo "📁 Checking after export:"
+        ls -la out/
         echo "🚀 Starting deployment to S3..."
         aws s3 sync out/ s3://zapstream-app-1762821749 --delete
         echo "✅ Deployment completed successfully!"
