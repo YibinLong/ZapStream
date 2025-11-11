@@ -21,6 +21,12 @@ export function ConnectionStatus() {
   ])
 
   const [isConnected, setIsConnected] = useState(true)
+  const [currentTime, setCurrentTime] = useState<string>("")
+
+  // Initialize current time on client side only
+  useEffect(() => {
+    setCurrentTime(new Date().toLocaleTimeString())
+  }, [])
 
   // Simulate real-time status updates
   useEffect(() => {
@@ -31,6 +37,7 @@ export function ConnectionStatus() {
           latency: service.latency ? Math.floor(service.latency + (Math.random() - 0.5) * 10) : undefined,
         })),
       )
+      setCurrentTime(new Date().toLocaleTimeString())
     }, 3000)
 
     return () => clearInterval(interval)
@@ -119,7 +126,7 @@ export function ConnectionStatus() {
             <p className="text-sm font-medium mb-1">All systems operational</p>
             <p className="text-xs text-muted-foreground">
               {"Last updated: "}
-              <span className="font-mono">{new Date().toLocaleTimeString()}</span>
+              <span className="font-mono">{currentTime || "Loading..."}</span>
             </p>
           </div>
         </div>

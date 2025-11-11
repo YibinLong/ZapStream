@@ -16,38 +16,39 @@ interface Event {
   source?: string
 }
 
+// Static timestamps to prevent hydration mismatch
 const mockEvents: Event[] = [
   {
     id: "evt_9k2m4n5p",
-    timestamp: new Date(Date.now() - 2000).toISOString(),
+    timestamp: "2025-01-10T23:40:00.000Z",
     status: "delivered",
     payload: { user_id: "usr_123", action: "login", ip: "192.168.1.1" },
     source: "auth-service",
   },
   {
     id: "evt_8j1l3m4n",
-    timestamp: new Date(Date.now() - 45000).toISOString(),
+    timestamp: "2025-01-10T23:39:15.000Z",
     status: "delivered",
     payload: { order_id: "ord_456", total: 299.99, items: 3 },
     source: "checkout-api",
   },
   {
     id: "evt_7h0k2l3m",
-    timestamp: new Date(Date.now() - 120000).toISOString(),
+    timestamp: "2025-01-10T23:38:00.000Z",
     status: "pending",
     payload: { webhook_url: "https://example.com/webhook", retry_count: 2 },
     source: "webhook-processor",
   },
   {
     id: "evt_6g9j1k2l",
-    timestamp: new Date(Date.now() - 180000).toISOString(),
+    timestamp: "2025-01-10T23:37:00.000Z",
     status: "failed",
     payload: { error: "Connection timeout", endpoint: "/api/notify" },
     source: "notification-service",
   },
   {
     id: "evt_5f8i0j1k",
-    timestamp: new Date(Date.now() - 240000).toISOString(),
+    timestamp: "2025-01-10T23:36:00.000Z",
     status: "delivered",
     payload: { email: "user@example.com", template: "welcome", sent: true },
     source: "email-service",
@@ -84,8 +85,9 @@ export function EventLog() {
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)
-    const now = new Date()
-    const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
+    // Use fixed reference time to prevent hydration mismatch
+    const referenceTime = new Date("2025-01-10T23:41:00.000Z")
+    const diff = Math.floor((referenceTime.getTime() - date.getTime()) / 1000)
 
     if (diff < 60) return `${diff}s ago`
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
