@@ -1,0 +1,52 @@
+name: Deploy ZapStream to AWS S3
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-2
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build Next.js static export
+      run: npm run build
+      env:
+        NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'https://api.zapier.com/v1' }}
+        NODE_ENV: production
+
+    - name: Deploy to S3
+      run: |
+        aws s3 sync out/ s3://zapstream-app-1762821749 --delete
+        echo "✅ Deployment completed successfully!"
+
+    - name: Invalidate CloudFront (if using)
+      run: |
+        echo "🚀 Website updated at: http://zapstream-app-1762821749.s3-website-us-west-2.amazonaws.com/"
+        # If you add CloudFront later, uncomment:
+        # aws cloudfront create-invalidation --distribution-id YOUR_DISTRIBUTION_ID --paths "/*"
