@@ -35,7 +35,15 @@ jobs:
       run: npm install --legacy-peer-deps
 
     - name: Build Next.js static export
-      run: npm run build
+      run: |
+        echo "🔧 Building Next.js app with static export..."
+        npm run build
+        echo "📁 Build completed. Checking output:"
+        ls -la
+        echo "📁 Checking for out/ directory:"
+        ls -la out/ || echo "❌ out/ directory not created by build"
+        echo "📁 Checking .next directory:"
+        ls -la .next/
       env:
         NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'https://api.zapier.com/v1' }}
         NODE_ENV: production
@@ -44,17 +52,18 @@ jobs:
       run: |
         echo "📁 Checking current directory contents:"
         ls -la
-        echo "📁 Checking if out/ directory exists:"
-        ls -la out/ || echo "out/ directory not found"
-        echo "📁 Checking if .next directory exists:"
+        echo "📁 Checking if out/ directory exists (Next.js 16 should create this automatically):"
+        ls -la out/ || echo "❌ out/ directory not found - build failed to create static export"
+        echo "📁 Checking .next directory:"
         ls -la .next/ || echo ".next directory not found"
-        echo "🚀 Manually creating static export..."
-        npx next export
-        echo "📁 Checking after export:"
-        ls -la out/
-        echo "🚀 Starting deployment to S3..."
-        aws s3 sync out/ s3://zapstream-app-1762821749 --delete
-        echo "✅ Deployment completed successfully!"
+        if [ -d "out" ]; then
+          echo "✅ Static export found, starting deployment to S3..."
+          aws s3 sync out/ s3://zapstream-app-1762821749 --delete
+          echo "✅ Deployment completed successfully!"
+        else
+          echo "❌ No out/ directory found - static export failed"
+          exit 1
+        fi
 
     - name: Invalidate CloudFront (if using)
       run: |
