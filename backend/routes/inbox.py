@@ -120,7 +120,7 @@ async def list_inbox_events(
         cursor_data = decode_cursor(cursor)
 
         # Get pending events from storage
-        events, next_event = await storage.get_pending_events(
+        events, next_cursor = await storage.get_pending_events(
             tenant_id=tenant_id,
             limit=limit,
             since=since,
@@ -140,11 +140,6 @@ async def list_inbox_events(
                 "topic": event.topic,
                 "payload": event.payload
             })
-
-        # Generate next cursor if there are more events
-        next_cursor = None
-        if next_event:
-            next_cursor = encode_cursor(next_event.created_at, next_event.id)
 
         return InboxResponse(
             events=event_items,
@@ -378,7 +373,12 @@ async def stream_events(
 
                     # Send each new event as an SSE message
                     for event in events:
-                        if event.created_at > last_seen:
+                        # Ensure both datetimes are timezone-aware for comparison
+                        event_time = event.created_at
+                        if event_time.tzinfo is None:
+                            event_time = event_time.replace(tzinfo=timezone.utc)
+
+                        if event_time > last_seen:
                             event_data = {
                                 "id": event.id,
                                 "created_at": event.created_at.isoformat(),
@@ -394,8 +394,8 @@ async def stream_events(
                             sse_message = f"data: {json.dumps(event_data)}\n\n"
                             yield sse_message
 
-                            # Update last seen timestamp
-                            last_seen = event.created_at
+                            # Update last seen timestamp (use timezone-aware version)
+                            last_seen = event_time
 
                     # Send heartbeat every 10 seconds to keep connection alive
                     yield ": heartbeat\n\n"

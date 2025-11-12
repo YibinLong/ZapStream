@@ -196,6 +196,7 @@ class ZapStreamAPIClient {
     // since EventSource doesn't support custom headers
     const url = new URL(streamURL);
     url.searchParams.append('api_key', this.apiKey);
+    url.searchParams.append('tenant_id', 'tenant_dev'); // Add tenant_id for SSE
 
     const eventSource = new EventSource(url.toString());
 

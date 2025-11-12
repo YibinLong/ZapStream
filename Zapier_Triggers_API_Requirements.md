@@ -51,7 +51,7 @@ Currently, triggers in Zapier are defined within individual integrations, limiti
 
 ### P2: Nice-to-have
 - **Documentation and Example Client:**
-  - Minimal documentation and a sample client to demonstrate ease of use.
+  - Documentation and a sample client to demonstrate ease of use.
 
 ## 7. Non-Functional Requirements
 - **Performance:** High availability with low latency (target < 100ms response time for event ingestion).
