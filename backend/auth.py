@@ -5,12 +5,13 @@ from starlette.requests import Request
 from pydantic import BaseModel
 
 from .config import get_settings
+
 security = HTTPBearer(auto_error=False)
 
 
 async def get_api_key(
     request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Security(security)
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
 ) -> str:
     """
     Extract and validate API key from request headers.
@@ -59,7 +60,9 @@ async def get_api_key(
 
 async def get_api_key_for_sse(
     request: Request,
-    api_key: Optional[str] = Query(None, description="API key for Server-Sent Events authentication")
+    api_key: Optional[str] = Query(
+        None, description="API key for Server-Sent Events authentication"
+    ),
 ) -> str:
     """
     Extract and validate API key for Server-Sent Events.
@@ -170,7 +173,9 @@ def extract_api_key(headers: Dict[str, str]) -> Optional[str]:
     return None
 
 
-def resolve_tenant_id(api_key: str, api_key_mapping: Optional[Dict[str, str]] = None) -> Optional[str]:
+def resolve_tenant_id(
+    api_key: str, api_key_mapping: Optional[Dict[str, str]] = None
+) -> Optional[str]:
     """
     Resolve tenant ID from API key.
 
@@ -189,5 +194,6 @@ def resolve_tenant_id(api_key: str, api_key_mapping: Optional[Dict[str, str]] = 
 
 class AuthenticatedTenant(BaseModel):
     """Model representing an authenticated tenant."""
+
     tenant_id: str
     api_key: str

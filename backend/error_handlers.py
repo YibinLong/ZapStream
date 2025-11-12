@@ -8,7 +8,6 @@ from typing import Dict, Any
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .models import ErrorResponse
 from .logging import setup_logging
@@ -24,7 +23,7 @@ class ZapStreamException(Exception):
         code: str,
         message: str,
         status_code: int = 500,
-        details: Dict[str, Any] = None
+        details: Dict[str, Any] = None,
     ):
         self.code = code
         self.message = message
@@ -38,10 +37,7 @@ class ValidationException(ZapStreamException):
 
     def __init__(self, message: str, details: Dict[str, Any] = None):
         super().__init__(
-            code="VALIDATION_ERROR",
-            message=message,
-            status_code=422,
-            details=details
+            code="VALIDATION_ERROR", message=message, status_code=422, details=details
         )
 
 
@@ -49,11 +45,7 @@ class AuthenticationException(ZapStreamException):
     """Exception for authentication errors."""
 
     def __init__(self, message: str = "Authentication failed"):
-        super().__init__(
-            code="AUTHENTICATION_ERROR",
-            message=message,
-            status_code=401
-        )
+        super().__init__(code="AUTHENTICATION_ERROR", message=message, status_code=401)
 
 
 class RateLimitException(ZapStreamException):
@@ -67,7 +59,7 @@ class RateLimitException(ZapStreamException):
             code="RATE_LIMIT_EXCEEDED",
             message=message,
             status_code=429,
-            details=details
+            details=details,
         )
 
 
@@ -76,10 +68,7 @@ class ConflictException(ZapStreamException):
 
     def __init__(self, message: str, details: Dict[str, Any] = None):
         super().__init__(
-            code="CONFLICT",
-            message=message,
-            status_code=409,
-            details=details
+            code="CONFLICT", message=message, status_code=409, details=details
         )
 
 
@@ -87,11 +76,7 @@ class NotFoundException(ZapStreamException):
     """Exception for resource not found errors."""
 
     def __init__(self, message: str = "Resource not found"):
-        super().__init__(
-            code="NOT_FOUND",
-            message=message,
-            status_code=404
-        )
+        super().__init__(code="NOT_FOUND", message=message, status_code=404)
 
 
 def create_error_response(
@@ -99,14 +84,11 @@ def create_error_response(
     message: str,
     request_id: str = None,
     details: Dict[str, Any] = None,
-    status_code: int | None = None
+    status_code: int | None = None,
 ) -> JSONResponse:
     """Create a standardized error response."""
 
-    error_content = {
-        "code": code,
-        "message": message
-    }
+    error_content = {"code": code, "message": message}
 
     if request_id:
         error_content["requestId"] = request_id
@@ -116,7 +98,7 @@ def create_error_response(
 
     return JSONResponse(
         status_code=status_code or get_status_code_for_error(code),
-        content=ErrorResponse(error=error_content).model_dump()
+        content=ErrorResponse(error=error_content).model_dump(),
     )
 
 
@@ -139,29 +121,26 @@ def get_status_code_for_error(code: str) -> int:
 
 def get_request_id(request: Request) -> str:
     """Extract request ID from request state or generate one."""
-    return getattr(request.state, 'request_id', None)
+    return getattr(request.state, "request_id", None)
 
 
 def log_error(
-    code: str,
-    message: str,
-    request: Request = None,
-    details: Dict[str, Any] = None
+    code: str, message: str, request: Request = None, details: Dict[str, Any] = None
 ):
     """Log error with context."""
 
     extra = {}
 
     if request:
-        extra['request_id'] = get_request_id(request)
-        extra['path'] = request.url.path
-        extra['method'] = request.method
+        extra["request_id"] = get_request_id(request)
+        extra["path"] = request.url.path
+        extra["method"] = request.method
 
-        if hasattr(request.state, 'tenant_id'):
-            extra['tenant_id'] = request.state.tenant_id
+        if hasattr(request.state, "tenant_id"):
+            extra["tenant_id"] = request.state.tenant_id
 
     if details:
-        extra['details'] = details
+        extra["details"] = details
 
     logger.error(f"{code}: {message}", extra=extra)
 
@@ -172,19 +151,14 @@ async def zapstream_exception_handler(request: Request, exc: ZapStreamException)
 
     request_id = get_request_id(request)
 
-    log_error(
-        code=exc.code,
-        message=exc.message,
-        request=request,
-        details=exc.details
-    )
+    log_error(code=exc.code, message=exc.message, request=request, details=exc.details)
 
     return create_error_response(
         code=exc.code,
         message=exc.message,
         request_id=request_id,
         details=exc.details if exc.details else None,
-        status_code=exc.status_code
+        status_code=exc.status_code,
     )
 
 
@@ -205,17 +179,13 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         503: "SERVICE_UNAVAILABLE",
     }.get(exc.status_code, "HTTP_ERROR")
 
-    log_error(
-        code=error_code,
-        message=str(exc.detail),
-        request=request
-    )
+    log_error(code=error_code, message=str(exc.detail), request=request)
 
     return create_error_response(
         code=error_code,
         message=str(exc.detail),
         request_id=request_id,
-        status_code=exc.status_code
+        status_code=exc.status_code,
     )
 
 
@@ -227,21 +197,16 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     # Format validation errors for response
     validation_details = []
     for error in exc.errors():
-        field_path = "->".join(str(loc) for loc in error['loc'])
-        validation_details.append({
-            "field": field_path,
-            "message": error['msg'],
-            "type": error['type']
-        })
+        field_path = "->".join(str(loc) for loc in error["loc"])
+        validation_details.append(
+            {"field": field_path, "message": error["msg"], "type": error["type"]}
+        )
 
     message = "Request validation failed"
     details = {"validation_errors": validation_details}
 
     log_error(
-        code="VALIDATION_ERROR",
-        message=message,
-        request=request,
-        details=details
+        code="VALIDATION_ERROR", message=message, request=request, details=details
     )
 
     return create_error_response(
@@ -249,7 +214,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         message=message,
         request_id=request_id,
         details=details,
-        status_code=422
+        status_code=422,
     )
 
 
@@ -265,12 +230,9 @@ async def general_exception_handler(request: Request, exc: Exception):
         code="INTERNAL_ERROR",
         message=f"Unhandled exception: {type(exc).__name__}: {str(exc)}",
         request=request,
-        details={"exception_type": type(exc).__name__}
+        details={"exception_type": type(exc).__name__},
     )
 
     return create_error_response(
-        code="INTERNAL_ERROR",
-        message=message,
-        request_id=request_id,
-        status_code=500
+        code="INTERNAL_ERROR", message=message, request_id=request_id, status_code=500
     )
