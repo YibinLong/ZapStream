@@ -13,7 +13,7 @@ from typing import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 
 from backend.main import app
 from backend.config import get_settings
@@ -88,7 +88,8 @@ def client(test_app) -> Generator[TestClient, None, None]:
 @pytest.fixture
 async def async_client(test_app) -> AsyncGenerator[AsyncClient, None]:
     """Create an async test client for the FastAPI app."""
-    async with AsyncClient(app=test_app, base_url="http://test") as ac:
+    transport = ASGITransport(app=test_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
 
