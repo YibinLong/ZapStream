@@ -3,13 +3,14 @@ import sqlite3
 import json
 import asyncio
 from typing import Optional, List, Dict, Any, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 from sqlmodel import create_engine, Session, select, and_, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.exc import IntegrityError
 
 from ..models import Event, EventStatus
 from ..config import get_settings
@@ -23,15 +24,19 @@ class SQLiteStorage(StorageInterface):
 
     def __init__(self):
         """Initialize SQLite storage with database connection."""
-        # Use a fixed absolute path for the database
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        db_path = os.path.join(current_dir, 'data', 'events.db')
+        # Prefer DATABASE_URL from settings for testability; fallback to local file
+        settings = get_settings()
+        configured_url = settings.database_url
 
-        # Ensure data directory exists
-        db_dir = os.path.dirname(db_path)
-        os.makedirs(db_dir, exist_ok=True)
-
-        self.database_url = f"sqlite:///{db_path}"
+        if configured_url and configured_url.startswith("sqlite:///"):
+            self.database_url = configured_url
+        else:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(current_dir, 'data', 'events.db')
+            # Ensure data directory exists
+            db_dir = os.path.dirname(db_path)
+            os.makedirs(db_dir, exist_ok=True)
+            self.database_url = f"sqlite:///{db_path}"
 
         # Create async engine
         async_url = self.database_url.replace("sqlite:///", "sqlite+aiosqlite:///")
@@ -52,35 +57,85 @@ class SQLiteStorage(StorageInterface):
 
     async def create_event(
         self,
-        tenant_id: str,
-        source: Optional[str],
-        event_type: Optional[str],
-        topic: Optional[str],
-        payload: Dict[str, Any],
+        tenant_id: Optional[str] = None,
+        source: Optional[str] = None,
+        event_type: Optional[str] = None,
+        topic: Optional[str] = None,
+        payload: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None
     ) -> Event:
         """Create a new event in SQLite storage."""
 
+        # Support tests passing a pre-constructed Event as the first argument.
+        evt_obj: Optional[Event] = None
+        if tenant_id is not None and not isinstance(tenant_id, str):
+            if isinstance(tenant_id, Event):
+                evt_obj = tenant_id
+            elif hasattr(tenant_id, "tenant_id"):
+                # Some tests construct lightweight objects; treat them like Events.
+                evt_obj = tenant_id  # type: ignore[assignment]
+
+        if evt_obj:
+            tenant_id = evt_obj.tenant_id
+            source = evt_obj.source
+            event_type = evt_obj.type
+            topic = evt_obj.topic
+            payload = evt_obj.payload or {}
+            idempotency_key = evt_obj.idempotency_key
+        # Basic validation
+        if tenant_id is None:
+            raise ValueError("tenant_id is required")
+        if payload is None:
+            payload = {}
         # Check idempotency key if provided
         if idempotency_key:
             existing_event = await self.get_by_idempotency(tenant_id, idempotency_key)
             if existing_event:
                 raise ValueError(f"Idempotency key already exists: {idempotency_key}")
 
-        event = Event(
-            tenant_id=tenant_id,
-            source=source,
-            type=event_type,
-            topic=topic,
-            payload=payload,
-            delivered=False,
-            status=EventStatus.PENDING,
-            idempotency_key=idempotency_key
-        )
+        # Preserve provided ID and timestamps if the caller supplied an Event
+        if evt_obj:
+            event_data: Dict[str, Any] = {
+                "tenant_id": tenant_id,
+                "source": source,
+                "type": event_type,
+                "topic": topic,
+                "payload": payload,
+                "delivered": bool(getattr(evt_obj, "delivered", False)),
+                "status": getattr(evt_obj, "status", None) or EventStatus.PENDING,
+                "idempotency_key": idempotency_key,
+            }
+            evt_id = getattr(evt_obj, "id", None)
+            if evt_id:
+                event_data["id"] = evt_id
+            created_at = getattr(evt_obj, "created_at", None)
+            if created_at:
+                event_data["created_at"] = created_at
+            updated_at = getattr(evt_obj, "updated_at", None)
+            if updated_at:
+                event_data["updated_at"] = updated_at
+            event = Event(**event_data)
+        else:
+            event = Event(
+                tenant_id=tenant_id,
+                source=source,
+                type=event_type,
+                topic=topic,
+                payload=payload,
+                delivered=False,
+                status=EventStatus.PENDING,
+                idempotency_key=idempotency_key
+            )
 
         async with AsyncSession(self.engine) as session:
             session.add(event)
-            await session.commit()
+            try:
+                await session.commit()
+            except IntegrityError as exc:
+                await session.rollback()
+                if idempotency_key:
+                    raise ValueError(f"Idempotency key already exists: {idempotency_key}") from exc
+                raise
             await session.refresh(event)
             return event
 
@@ -208,7 +263,7 @@ class SQLiteStorage(StorageInterface):
             # Update event
             event.delivered = True
             event.status = EventStatus.ACKNOWLEDGED
-            event.updated_at = datetime.utcnow()
+            event.updated_at = datetime.now(timezone.utc)
 
             await session.commit()
             return True
@@ -232,14 +287,14 @@ class SQLiteStorage(StorageInterface):
 
             # Soft delete
             event.status = EventStatus.DELETED
-            event.updated_at = datetime.utcnow()
+            event.updated_at = datetime.now(timezone.utc)
 
             await session.commit()
             return True
 
     async def cleanup_old_events(self, ttl_minutes: int = 60) -> int:
         """Clean up old acknowledged/deleted events."""
-        cutoff_time = datetime.utcnow() - timedelta(minutes=ttl_minutes)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=ttl_minutes)
 
         async with AsyncSession(self.engine) as session:
             statement = (

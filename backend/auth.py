@@ -1,12 +1,10 @@
 from typing import Optional, Dict
-from fastapi import HTTPException, Security, status
+from fastapi import HTTPException, Security, status, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.requests import Request
 from pydantic import BaseModel
 
 from .config import get_settings
-
-settings = get_settings()
 security = HTTPBearer(auto_error=False)
 
 
@@ -27,7 +25,7 @@ async def get_api_key(
     Raises:
         HTTPException: 401 if API key is missing or invalid
     """
-    api_key_mapping = settings.api_key_mapping
+    api_key_mapping = get_settings().api_key_mapping
 
     # Try Authorization header first
     if credentials and credentials.credentials:
@@ -45,6 +43,64 @@ async def get_api_key(
 
     # Look up tenant ID from API key
     tenant_id = api_key_mapping.get(api_key)
+
+    if not tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Attach tenant ID to request state for downstream use
+    request.state.tenant_id = tenant_id
+
+    return tenant_id
+
+
+async def get_api_key_for_sse(
+    request: Request,
+    api_key: Optional[str] = Query(None, description="API key for Server-Sent Events authentication")
+) -> str:
+    """
+    Extract and validate API key for Server-Sent Events.
+
+    Since EventSource doesn't support custom headers, this function allows
+    the API key to be passed via query parameter.
+
+    Args:
+        request: The HTTP request object
+        api_key: API key from query parameter
+
+    Returns:
+        tenant_id: The tenant ID associated with the valid API key
+
+    Raises:
+        HTTPException: 401 if API key is missing or invalid
+    """
+    api_key_mapping = get_settings().api_key_mapping
+
+    # Try query parameter first (for SSE)
+    if api_key:
+        resolved_api_key = api_key
+    else:
+        # Fall back to headers (for regular requests)
+        # Try Authorization header first
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            resolved_api_key = auth_header[7:].strip()
+        else:
+            # Fall back to X-API-Key header
+            resolved_api_key = request.headers.get("X-API-Key")
+
+    if not resolved_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key required (use ?api_key=YOUR_KEY for SSE)",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Look up tenant ID from API key
+    tenant_id = api_key_mapping.get(resolved_api_key)
 
     if not tenant_id:
         raise HTTPException(
@@ -93,13 +149,25 @@ def extract_api_key(headers: Dict[str, str]) -> Optional[str]:
     Returns:
         API key string if found, None otherwise
     """
-    # Try Authorization header first
-    auth_header = headers.get("Authorization") or headers.get("authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        return auth_header[7:].strip()  # Remove "Bearer " prefix
+    # Normalize header keys to lowercase for case-insensitive lookup
+    lowered_headers = {k.lower(): v for k, v in headers.items()}
 
-    # Fall back to X-API-Key header
-    return headers.get("X-API-Key") or headers.get("x-api-key")
+    # Try Authorization header first (case-insensitive, robust whitespace)
+    auth_value = lowered_headers.get("authorization")
+    if auth_value:
+        # Split on whitespace and tabs, handle multiple spaces
+        parts = auth_value.strip().split()
+        if len(parts) >= 2 and parts[0].lower() == "bearer":
+            token = " ".join(parts[1:]).strip()
+            return token if token else None
+
+    # Fall back to X-API-Key header (various casings)
+    for key in ["x-api-key", "x-api_key", "x_api_key"]:
+        if key in lowered_headers:
+            value = str(lowered_headers[key]).strip()
+            return value or None
+
+    return None
 
 
 def resolve_tenant_id(api_key: str, api_key_mapping: Optional[Dict[str, str]] = None) -> Optional[str]:

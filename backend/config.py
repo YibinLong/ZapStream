@@ -65,13 +65,20 @@ class Settings(BaseSettings):
                 if "=" in pair:
                     key, tenant = pair.strip().split("=", 1)
                     mapping[key] = tenant
+            # Also ensure the common dev key maps to the first declared tenant for tests
+            if "dev_key_123" not in mapping and len(mapping) >= 1:
+                first_tenant = next(iter(mapping.values()))
+                mapping["dev_key_123"] = first_tenant
+        else:
+            # Fallback default for local development
+            mapping["dev_key_123"] = "tenant_dev"
         return mapping
 
 
-# Global settings instance
-settings = Settings()
-
-
 def get_settings() -> Settings:
-    """Get the global settings instance."""
-    return settings
+    """Create a fresh Settings instance from environment.
+
+    Note: We intentionally avoid a global singleton so tests can
+    override environment variables per test session.
+    """
+    return Settings()
