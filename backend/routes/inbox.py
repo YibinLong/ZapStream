@@ -10,7 +10,6 @@ import json
 import asyncio
 from fastapi import APIRouter, HTTPException, Query, status, Path, Request
 from fastapi.responses import StreamingResponse
-from pydantic import ValidationError
 
 from ..models import InboxResponse, AckResponse, DeleteResponse, EventStatus
 from ..dependencies import StorageBackend, AuthenticatedTenant
@@ -37,17 +36,17 @@ def decode_cursor(cursor: Optional[str]) -> Optional[tuple]:
         return None
 
     try:
-        parts = cursor.split('|', 1)
+        parts = cursor.split("|", 1)
         if len(parts) != 2:
             raise ValueError("Invalid cursor format")
 
         created_at_str, event_id = parts
-        created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+        created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
         return (created_at, event_id)
     except (ValueError, IndexError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid cursor format: {str(e)}"
+            detail=f"Invalid cursor format: {str(e)}",
         )
 
 
@@ -63,7 +62,7 @@ def encode_cursor(created_at: datetime, event_id: str) -> str:
         str: Encoded cursor string
     """
     # Use ISO format with Z suffix for UTC
-    created_at_str = created_at.isoformat().replace('+00:00', 'Z')
+    created_at_str = created_at.isoformat().replace("+00:00", "Z")
     return f"{created_at_str}|{event_id}"
 
 
@@ -75,23 +74,18 @@ async def list_inbox_events(
     request: Request,
     tenant_id: AuthenticatedTenant,
     storage: StorageBackend,
-    limit: Annotated[int, Query(
-        description="Maximum number of events to return",
-        ge=1,
-        le=500
-    )] = 50,
-    since: Annotated[Optional[datetime], Query(
-        description="Return events created after this ISO timestamp"
-    )] = None,
-    topic: Annotated[Optional[str], Query(
-        description="Filter by event topic"
-    )] = None,
-    type: Annotated[Optional[str], Query(
-        description="Filter by event type"
-    )] = None,
-    cursor: Annotated[Optional[str], Query(
-        description="Pagination cursor for next page"
-    )] = None
+    limit: Annotated[
+        int, Query(description="Maximum number of events to return", ge=1, le=500)
+    ] = 50,
+    since: Annotated[
+        Optional[datetime],
+        Query(description="Return events created after this ISO timestamp"),
+    ] = None,
+    topic: Annotated[Optional[str], Query(description="Filter by event topic")] = None,
+    type: Annotated[Optional[str], Query(description="Filter by event type")] = None,
+    cursor: Annotated[
+        Optional[str], Query(description="Pagination cursor for next page")
+    ] = None,
 ):
     """
     List undelivered events from the tenant's inbox.
@@ -126,25 +120,24 @@ async def list_inbox_events(
             since=since,
             topic=topic,
             event_type=type,
-            cursor=cursor_data
+            cursor=cursor_data,
         )
 
         # Convert to response format
         event_items = []
         for event in events:
-            event_items.append({
-                "id": event.id,
-                "created_at": event.created_at.isoformat().replace("+00:00", "Z"),
-                "source": event.source,
-                "type": event.type,
-                "topic": event.topic,
-                "payload": event.payload
-            })
+            event_items.append(
+                {
+                    "id": event.id,
+                    "created_at": event.created_at.isoformat().replace("+00:00", "Z"),
+                    "source": event.source,
+                    "type": event.type,
+                    "topic": event.topic,
+                    "payload": event.payload,
+                }
+            )
 
-        return InboxResponse(
-            events=event_items,
-            next_cursor=next_cursor
-        )
+        return InboxResponse(events=event_items, next_cursor=next_cursor)
 
     except HTTPException:
         # Re-raise FastAPI HTTP exceptions
@@ -152,6 +145,7 @@ async def list_inbox_events(
     except Exception as e:
         # Log the error and return a generic error response
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(f"Error listing inbox events: {str(e)}", exc_info=True)
 
@@ -161,9 +155,9 @@ async def list_inbox_events(
                 "error": {
                     "code": "INTERNAL_ERROR",
                     "message": "Internal server error",
-                    "request_id": "unknown"  # Would be set by middleware
+                    "request_id": "unknown",  # Would be set by middleware
                 }
-            }
+            },
         )
 
 
@@ -172,9 +166,7 @@ async def acknowledge_event(
     request: Request,
     tenant_id: AuthenticatedTenant,
     storage: StorageBackend,
-    event_id: Annotated[str, Path(
-        description="ID of the event to acknowledge"
-    )]
+    event_id: Annotated[str, Path(description="ID of the event to acknowledge")],
 ):
     """
     Acknowledge an event as delivered/processed.
@@ -203,8 +195,7 @@ async def acknowledge_event(
 
         if not event or event.tenant_id != tenant_id:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Event not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Event not found"
             )
 
         # Check if event can be acknowledged
@@ -216,18 +207,15 @@ async def acknowledge_event(
                         "code": "INVALID_STATE_TRANSITION",
                         "message": "Cannot acknowledge deleted event",
                         "request_id": "unknown",
-                        "current_status": event.status
+                        "current_status": event.status,
                     }
-                }
+                },
             )
 
         # Acknowledge the event (idempotent operation)
         await storage.acknowledge_event(event_id, tenant_id)
 
-        return AckResponse(
-            id=event_id,
-            status="acknowledged"
-        )
+        return AckResponse(id=event_id, status="acknowledged")
 
     except HTTPException:
         # Re-raise FastAPI HTTP exceptions
@@ -235,6 +223,7 @@ async def acknowledge_event(
     except Exception as e:
         # Log the error and return a generic error response
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(f"Error acknowledging event {event_id}: {str(e)}", exc_info=True)
 
@@ -244,9 +233,9 @@ async def acknowledge_event(
                 "error": {
                     "code": "INTERNAL_ERROR",
                     "message": "Internal server error",
-                    "request_id": "unknown"
+                    "request_id": "unknown",
                 }
-            }
+            },
         )
 
 
@@ -255,9 +244,7 @@ async def delete_event(
     request: Request,
     tenant_id: AuthenticatedTenant,
     storage: StorageBackend,
-    event_id: Annotated[str, Path(
-        description="ID of the event to delete"
-    )]
+    event_id: Annotated[str, Path(description="ID of the event to delete")],
 ):
     """
     Delete an event from the inbox.
@@ -285,8 +272,7 @@ async def delete_event(
 
         if not event or event.tenant_id != tenant_id:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Event not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Event not found"
             )
 
         # Check if event can be deleted
@@ -297,18 +283,15 @@ async def delete_event(
                     "error": {
                         "code": "ALREADY_DELETED",
                         "message": "Event is already deleted",
-                        "request_id": "unknown"
+                        "request_id": "unknown",
                     }
-                }
+                },
             )
 
         # Delete the event
         await storage.delete_event(event_id, tenant_id)
 
-        return DeleteResponse(
-            id=event_id,
-            status="deleted"
-        )
+        return DeleteResponse(id=event_id, status="deleted")
 
     except HTTPException:
         # Re-raise FastAPI HTTP exceptions
@@ -316,6 +299,7 @@ async def delete_event(
     except Exception as e:
         # Log the error and return a generic error response
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(f"Error deleting event {event_id}: {str(e)}", exc_info=True)
 
@@ -325,15 +309,15 @@ async def delete_event(
                 "error": {
                     "code": "INTERNAL_ERROR",
                     "message": "Internal server error",
-                    "request_id": "unknown"
+                    "request_id": "unknown",
                 }
-            }
+            },
         )
+
 
 @router.get("/stream")
 async def stream_events(
-    tenant_id: Annotated[str, get_api_key_for_sse],
-    storage: StorageBackend
+    tenant_id: Annotated[str, get_api_key_for_sse], storage: StorageBackend
 ):
     """
     Server-Sent Events endpoint for real-time event updates.
@@ -352,6 +336,7 @@ async def stream_events(
     Raises:
         HTTPException: 401 for authentication errors
     """
+
     async def event_stream():
         """Generate SSE events for real-time updates."""
 
@@ -368,7 +353,7 @@ async def stream_events(
                         since=last_seen,
                         topic=None,
                         event_type=None,
-                        cursor=None
+                        cursor=None,
                     )
 
                     # Send each new event as an SSE message
@@ -387,7 +372,7 @@ async def stream_events(
                                 "topic": event.topic,
                                 "payload": event.payload,
                                 "status": event.status,
-                                "delivered": event.delivered
+                                "delivered": event.delivered,
                             }
 
                             # Format as SSE message
@@ -406,14 +391,17 @@ async def stream_events(
                 except Exception as e:
                     # Log error but keep stream alive
                     import logging
+
                     logger = logging.getLogger(__name__)
-                    logger.error(f"Error in event stream for tenant {tenant_id}: {str(e)}")
+                    logger.error(
+                        f"Error in event stream for tenant {tenant_id}: {str(e)}"
+                    )
 
                     # Send error message to client
                     error_data = {
                         "type": "error",
                         "message": "Internal stream error, continuing...",
-                        "timestamp": datetime.now(timezone.utc).isoformat()
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                     }
                     yield f"data: {json.dumps(error_data)}\n\n"
 
@@ -423,14 +411,19 @@ async def stream_events(
         except asyncio.CancelledError:
             # Client disconnected cleanly
             import logging
+
             logger = logging.getLogger(__name__)
             logger.info(f"Event stream disconnected for tenant {tenant_id}")
             raise
         except Exception as e:
             # Unexpected error in the stream generator
             import logging
+
             logger = logging.getLogger(__name__)
-            logger.error(f"Unexpected error in event stream for tenant {tenant_id}: {str(e)}", exc_info=True)
+            logger.error(
+                f"Unexpected error in event stream for tenant {tenant_id}: {str(e)}",
+                exc_info=True,
+            )
             raise
 
     return StreamingResponse(
@@ -439,6 +432,6 @@ async def stream_events(
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"  # Disable nginx buffering
-        }
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        },
     )

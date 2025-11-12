@@ -16,22 +16,10 @@ from . import events, inbox, health
 api_router = APIRouter()
 
 # Include sub-routers
-api_router.include_router(
-    health.router,
-    prefix="/health",
-    tags=["Health"]
-)
+api_router.include_router(health.router, prefix="/health", tags=["Health"])
 
-api_router.include_router(
-    events.router,
-    prefix="/events",
-    tags=["Events"]
-)
+api_router.include_router(events.router, prefix="/events", tags=["Events"])
 
-api_router.include_router(
-    inbox.router,
-    prefix="/inbox",
-    tags=["Inbox"]
-)
+api_router.include_router(inbox.router, prefix="/inbox", tags=["Inbox"])
 
 __all__ = ["api_router"]

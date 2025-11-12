@@ -9,10 +9,11 @@ from fastapi import APIRouter, Request, HTTPException, Header, status, Depends
 from starlette.requests import Request
 from pydantic import ValidationError
 
-from ..models import EventCreate, EventResponse, ErrorResponse
-from ..dependencies import TenantId, StorageBackend, AuthenticatedTenant
+from ..models import EventCreate, EventResponse
+from ..dependencies import StorageBackend, AuthenticatedTenant
 from ..rate_limit import check_rate_limit
 from ..config import get_settings
+
 router = APIRouter()
 
 
@@ -27,20 +28,23 @@ async def validate_payload_size(payload: dict) -> None:
         HTTPException: 400 if payload is too large
     """
     import json
+
     payload_str = json.dumps(payload)
-    payload_size = len(payload_str.encode('utf-8'))
+    payload_size = len(payload_str.encode("utf-8"))
 
     max_bytes = get_settings().max_payload_bytes
     if payload_size > max_bytes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Payload must be a JSON object and <= {max_bytes} bytes"
+            detail=f"Payload must be a JSON object and <= {max_bytes} bytes",
         )
 
 
 async def get_idempotency_key(
     request: Request,
-    x_idempotency_key: Annotated[Optional[str], Header(alias="X-Idempotency-Key")] = None
+    x_idempotency_key: Annotated[
+        Optional[str], Header(alias="X-Idempotency-Key")
+    ] = None,
 ) -> Optional[str]:
     """
     Extract idempotency key from headers.
@@ -60,7 +64,7 @@ async def create_event(
     request: Request,
     tenant_id: AuthenticatedTenant,
     storage: StorageBackend,
-    idempotency_key: Optional[str] = Depends(get_idempotency_key)
+    idempotency_key: Optional[str] = Depends(get_idempotency_key),
 ):
     """
     Create a new event.
@@ -93,16 +97,14 @@ async def create_event(
         raw_body = await request.json()
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid JSON body"
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid JSON body"
         )
 
     try:
         event_data = EventCreate(**raw_body)
     except ValidationError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=exc.errors()
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()
         )
 
     # Validate payload size
@@ -112,8 +114,7 @@ async def create_event(
         # Check for idempotency conflicts
         if idempotency_key:
             existing_event = await storage.get_by_idempotency(
-                tenant_id=tenant_id,
-                idempotency_key=idempotency_key
+                tenant_id=tenant_id, idempotency_key=idempotency_key
             )
             if existing_event:
                 raise HTTPException(
@@ -122,10 +123,12 @@ async def create_event(
                         "error": {
                             "code": "IDEMPOTENCY_CONFLICT",
                             "message": "Event with this idempotency key already exists",
-                            "request_id": getattr(request.state, "request_id", "unknown"),
-                            "existing_event_id": existing_event.id
+                            "request_id": getattr(
+                                request.state, "request_id", "unknown"
+                            ),
+                            "existing_event_id": existing_event.id,
                         }
-                    }
+                    },
                 )
 
         # Create the event
@@ -135,13 +138,11 @@ async def create_event(
             event_type=event_data.type,
             topic=event_data.topic,
             payload=event_data.payload,
-            idempotency_key=idempotency_key
+            idempotency_key=idempotency_key,
         )
 
         return EventResponse(
-            id=event.id,
-            received_at=event.created_at,
-            status="accepted"
+            id=event.id, received_at=event.created_at, status="accepted"
         )
 
     except HTTPException:
@@ -151,8 +152,7 @@ async def create_event(
         existing_event_id = None
         if idempotency_key:
             existing_event = await storage.get_by_idempotency(
-                tenant_id=tenant_id,
-                idempotency_key=idempotency_key
+                tenant_id=tenant_id, idempotency_key=idempotency_key
             )
             if existing_event:
                 existing_event_id = existing_event.id
@@ -164,13 +164,14 @@ async def create_event(
                     "code": "IDEMPOTENCY_CONFLICT",
                     "message": "Event with this idempotency key already exists",
                     "request_id": getattr(request.state, "request_id", "unknown"),
-                    "existing_event_id": existing_event_id
+                    "existing_event_id": existing_event_id,
                 }
-            }
+            },
         ) from exc
     except Exception as e:
         # Log the error and return a generic error response
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(f"Error creating event: {str(e)}", exc_info=True)
 
@@ -180,7 +181,7 @@ async def create_event(
                 "error": {
                     "code": "INTERNAL_ERROR",
                     "message": "Internal server error",
-                    "request_id": getattr(request.state, "request_id", "unknown")
+                    "request_id": getattr(request.state, "request_id", "unknown"),
                 }
-            }
+            },
         )
