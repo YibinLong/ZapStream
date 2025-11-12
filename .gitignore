@@ -101,3 +101,6 @@ cdk/lib/*.js
 
 # Build artifacts
 lambda.zip
+backend/routes/*.bak
+lambda_simple.py
+test_event.json
