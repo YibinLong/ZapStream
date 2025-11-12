@@ -126,45 +126,45 @@
 
 ---
 
-## PHASE 8: Frontend-Backend Integration ⬜
+## PHASE 8: Frontend-Backend Integration ✅
 
-### Epic 8.1: Connect Frontend to Real Backend Data ⬜
+### Epic 8.1: Connect Frontend to Real Backend Data ✅
 
 **Story:** Replace mock data in frontend dashboard with real API data
 
-- ⬜ Task 8.1.1: Update Event Stream component to fetch real events from `/inbox` API endpoint
-- ⬜ Task 8.1.2: Replace mock statistics cards with real data calculations (event count, success rate, response time)
-- ⬜ Task 8.1.3: Implement real-time polling or WebSocket for live event updates
-- ⬜ Task 8.1.4: Add API Playground functionality to actually test backend endpoints from UI
-- ⬜ Task 8.1.5: Implement proper error handling for API calls (loading states, error messages, retry logic)
-- ⬜ Task 8.1.6: Update System Status panel to show real backend connectivity status
+- ✅ Task 8.1.1: Update Event Stream component to fetch real events from `/inbox` API endpoint
+- ✅ Task 8.1.2: Replace mock statistics cards with real data calculations (event count, success rate, response time)
+- ✅ Task 8.1.3: Implement real-time polling or WebSocket for live event updates
+- ✅ Task 8.1.4: Add API Playground functionality to actually test backend endpoints from UI
+- ✅ Task 8.1.5: Implement proper error handling for API calls (loading states, error messages, retry logic)
+- ✅ Task 8.1.6: Update System Status panel to show real backend connectivity status
 
-**Acceptance:** Dashboard displays live data from backend API; new events appear automatically; API Playground successfully calls backend.
+**Acceptance:** Dashboard displays live data from backend API; new events appear automatically; API Playground successfully calls backend. ✅
 
-### Epic 8.2: Real-time Features ⬜
+### Epic 8.2: Real-time Features ✅
 
 **Story:** Add live event streaming and notifications
 
-- ⬜ Task 8.2.1: Implement WebSocket or Server-Sent Events for real-time event updates
-- ⬜ Task 8.2.2: Add event creation form in frontend Playground tab
-- ⬜ Task 8.2.3: Add event acknowledgment and deletion UI in dashboard
-- ⬜ Task 8.2.4: Implement real-time statistics updates when events are created/updated
-- ⬜ Task 8.2.5: Add notification system for new events and system alerts
+- ✅ Task 8.2.1: Implement WebSocket or Server-Sent Events for real-time event updates
+- ✅ Task 8.2.2: Add event creation form in frontend Playground tab
+- ✅ Task 8.2.3: Add event acknowledgment and deletion UI in dashboard
+- ✅ Task 8.2.4: Implement real-time statistics updates when events are created/updated
+- ✅ Task 8.2.5: Add notification system for new events and system alerts
 
-**Acceptance:** Users can create, acknowledge, and delete events from frontend; all updates appear in real-time without page refresh.
+**Acceptance:** Users can create, acknowledge, and delete events from frontend; all updates appear in real-time without page refresh. ✅
 
 ---
 
-## PHASE 9: Developer Experience ⬜
+## PHASE 9: Developer Experience ✅
 
-### Epic 9.1: Scripts and docs for local dev ⬜
+### Epic 9.1: Scripts and docs for local dev ✅
 
 **Story:** Make local iteration fast and predictable
 
-- ⬜ Task 9.1.1: Provide Makefile targets (`dev`, `test`, optionally `lint`)
-- ⬜ Task 9.1.2: Ensure `.env.example` + quickstart steps are discoverable alongside the backend
+- ✅ Task 9.1.1: Provide Makefile targets (`dev`, `test`, optionally `lint`)
+- ✅ Task 9.1.2: Ensure `.env.example` + quickstart steps are discoverable alongside the backend
 
-**Acceptance:** One command to run server with reload; one command to run tests; env config is clear.
+**Acceptance:** One command to run server with reload; one command to run tests; env config is clear. ✅
 
 ---
 
