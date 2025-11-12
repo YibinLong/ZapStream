@@ -64,7 +64,7 @@ class TestCustomExceptions:
         )
 
         assert exc.code == "VALIDATION_ERROR"
-        assert exc.status_code == 400
+        assert exc.status_code == 422
         assert exc.details == details
 
     def test_authentication_exception_default(self):
@@ -177,7 +177,7 @@ class TestErrorResponseCreation:
     def test_get_status_code_for_error(self):
         """Test mapping error codes to status codes."""
         test_cases = [
-            ("VALIDATION_ERROR", 400),
+            ("VALIDATION_ERROR", 422),
             ("AUTHENTICATION_ERROR", 401),
             ("FORBIDDEN", 403),
             ("NOT_FOUND", 404),
@@ -294,7 +294,7 @@ class TestExceptionHandlers:
 
         mock_log.assert_called_once()
         assert isinstance(response, JSONResponse)
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_general_exception_handler(self):

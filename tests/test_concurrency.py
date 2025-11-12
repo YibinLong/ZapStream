@@ -6,10 +6,11 @@ Tests race conditions and concurrent access scenarios.
 
 import pytest
 import asyncio
-import aiohttp
 from typing import List, Dict
 from concurrent.futures import ThreadPoolExecutor
 import time
+from httpx import AsyncClient, ASGITransport
+from fastapi.testclient import TestClient
 
 
 @pytest.mark.slow
@@ -20,10 +21,9 @@ class TestConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_event_creation_different_keys(self, test_app, sample_event_payload, valid_api_key):
         """Test creating multiple events simultaneously with different idempotency keys."""
-        from httpx import AsyncClient
-
         base_url = "http://test"
-        async with AsyncClient(app=test_app, base_url=base_url) as client:
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url=base_url) as client:
 
             async def create_event(key_suffix: int):
                 headers = {
@@ -58,10 +58,9 @@ class TestConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_event_creation_same_key(self, test_app, sample_event_payload, valid_api_key):
         """Test creating multiple events with the same idempotency key concurrently."""
-        from httpx import AsyncClient
-
         base_url = "http://test"
-        async with AsyncClient(app=test_app, base_url=base_url) as client:
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url=base_url) as client:
 
             async def create_event_with_same_key():
                 headers = {
@@ -94,8 +93,6 @@ class TestConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_inbox_access(self, test_app, valid_api_key, storage_backend):
         """Test concurrent access to inbox endpoint."""
-        from httpx import AsyncClient
-
         # Create some test events first
         import uuid
         from backend.models import Event, EventStatus
@@ -120,7 +117,8 @@ class TestConcurrency:
         event_ids = await create_test_events()
 
         base_url = "http://test"
-        async with AsyncClient(app=test_app, base_url=base_url) as client:
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url=base_url) as client:
 
             async def get_inbox():
                 headers = {"Authorization": f"Bearer {valid_api_key}"}
@@ -145,8 +143,6 @@ class TestConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_event_acknowledgment(self, test_app, valid_api_key, storage_backend):
         """Test concurrent acknowledgment of the same event."""
-        from httpx import AsyncClient
-
         # Create a test event first
         import uuid
         from backend.models import Event, EventStatus
@@ -165,7 +161,8 @@ class TestConcurrency:
         event_id = event.id
 
         base_url = "http://test"
-        async with AsyncClient(app=test_app, base_url=base_url) as client:
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url=base_url) as client:
 
             async def acknowledge_event():
                 headers = {"Authorization": f"Bearer {valid_api_key}"}
@@ -242,7 +239,6 @@ class TestConcurrency:
     @pytest.mark.asyncio
     async def test_mixed_concurrent_operations(self, test_app, sample_event_payload, valid_api_key, storage_backend):
         """Test mixed concurrent operations: create, read, acknowledge."""
-        from httpx import AsyncClient
         import uuid
         from backend.models import Event, EventStatus
 
@@ -261,7 +257,8 @@ class TestConcurrency:
         event_id = event.id
 
         base_url = "http://test"
-        async with AsyncClient(app=test_app, base_url=base_url) as client:
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url=base_url) as client:
 
             async def create_event():
                 headers = {
@@ -295,12 +292,12 @@ class TestConcurrency:
     @pytest.mark.asyncio
     async def test_race_condition_inbox_filtering(self, test_app, valid_api_key, storage_backend):
         """Test race conditions in inbox filtering with concurrent event creation and reading."""
-        from httpx import AsyncClient
         import uuid
         from backend.models import Event, EventStatus
 
         base_url = "http://test"
-        async with AsyncClient(app=test_app, base_url=base_url) as client:
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url=base_url) as client:
 
             async def create_events_batch(start_id: int, count: int):
                 """Create a batch of events."""
@@ -345,8 +342,6 @@ class TestRateLimitingConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_requests_rate_limit(self, test_app, sample_event_payload, valid_api_key):
         """Test rate limiting behavior under concurrent requests."""
-        from httpx import AsyncClient
-
         # Temporarily set a low rate limit for testing
         import os
         original_rate_limit = os.environ.get("RATE_LIMIT_PER_MINUTE")
@@ -354,7 +349,8 @@ class TestRateLimitingConcurrency:
 
         try:
             base_url = "http://test"
-            async with AsyncClient(app=test_app, base_url=base_url) as client:
+            transport = ASGITransport(app=test_app)
+            async with AsyncClient(transport=transport, base_url=base_url) as client:
 
                 async def create_event():
                     headers = {

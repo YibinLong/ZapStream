@@ -1,11 +1,11 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from enum import Enum
 
-from pydantic import BaseModel, Field, ConfigDict
-from sqlmodel import SQLModel, Field as SQLField
-from sqlalchemy import Column, JSON
+from pydantic import BaseModel, ConfigDict
+from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, JSON, UniqueConstraint
 from sqlalchemy.types import JSON as SQLAlchemyJSON
 
 
@@ -14,6 +14,11 @@ class EventStatus(str, Enum):
     PENDING = "pending"
     ACKNOWLEDGED = "acknowledged"
     DELETED = "deleted"
+
+
+def utc_now() -> datetime:
+    """Return an aware datetime in UTC."""
+    return datetime.now(timezone.utc)
 
 
 class EventBase(SQLModel):
@@ -34,30 +39,33 @@ class EventBase(SQLModel):
 class Event(EventBase, table=True):
     """Event database model."""
     __tablename__ = "events"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "idempotency_key", name="uq_events_tenant_id_idempotency"),
+    )
 
-    id: str = SQLField(
+    id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
         primary_key=True,
         description="Unique event identifier"
     )
-    tenant_id: str = SQLField(index=True, description="Tenant identifier")
-    source: Optional[str] = SQLField(default=None, description="Event source (e.g., 'billing')")
-    type: Optional[str] = SQLField(default=None, description="Event type (e.g., 'invoice.paid')")
-    topic: Optional[str] = SQLField(default=None, description="Event topic (e.g., 'finance')")
-    payload: Optional[Dict[str, Any]] = SQLField(default=None, sa_column=Column(JSON), description="JSON payload containing event data")
-    delivered: bool = SQLField(default=False, description="Whether event has been delivered")
-    status: EventStatus = SQLField(default=EventStatus.PENDING, description="Event processing status")
-    idempotency_key: Optional[str] = SQLField(
+    tenant_id: str = Field(index=True, description="Tenant identifier")
+    source: Optional[str] = Field(default=None, description="Event source (e.g., 'billing')")
+    type: Optional[str] = Field(default=None, description="Event type (e.g., 'invoice.paid')")
+    topic: Optional[str] = Field(default=None, description="Event topic (e.g., 'finance')")
+    payload: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON), description="JSON payload containing event data")
+    delivered: bool = Field(default=False, description="Whether event has been delivered")
+    status: EventStatus = Field(default=EventStatus.PENDING, description="Event processing status")
+    idempotency_key: Optional[str] = Field(
         default=None,
         index=True,
         description="Optional idempotency key for safe retries"
     )
-    created_at: datetime = SQLField(
-        default_factory=datetime.utcnow,
+    created_at: datetime = Field(
+        default_factory=utc_now,
         description="Event creation timestamp"
     )
-    updated_at: datetime = SQLField(
-        default_factory=datetime.utcnow,
+    updated_at: datetime = Field(
+        default_factory=utc_now,
         description="Last update timestamp"
     )
 

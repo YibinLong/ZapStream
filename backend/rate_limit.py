@@ -6,8 +6,6 @@ from fastapi import HTTPException, Request, status
 
 from .config import get_settings
 
-settings = get_settings()
-
 
 class TokenBucket:
     """Simple token bucket implementation for rate limiting."""
@@ -72,13 +70,21 @@ class RateLimiter:
             TokenBucket: Token bucket for the client
         """
         with self.lock:
+            current_settings = get_settings()
+            desired_capacity = current_settings.rate_limit_per_minute
+            refill_rate = desired_capacity / 60.0
             if client_id not in self.buckets:
-                # Convert rate limit from per-minute to per-second
-                refill_rate = settings.rate_limit_per_minute / 60.0
                 self.buckets[client_id] = TokenBucket(
-                    capacity=settings.rate_limit_per_minute,
+                    capacity=desired_capacity,
                     refill_rate=refill_rate
                 )
+            else:
+                bucket = self.buckets[client_id]
+                if bucket.capacity != desired_capacity or bucket.refill_rate != refill_rate:
+                    bucket.capacity = desired_capacity
+                    bucket.refill_rate = refill_rate
+                    bucket.tokens = desired_capacity
+                    bucket.last_refill = time.time()
             return self.buckets[client_id]
 
     def is_allowed(self, client_id: str, tokens: int = 1) -> bool:
@@ -114,6 +120,12 @@ class RateLimiter:
 
 # Global rate limiter instance
 rate_limiter = RateLimiter()
+
+
+def reset_rate_limiter() -> None:
+    """Reset the global rate limiter (useful for tests and app restarts)."""
+    global rate_limiter
+    rate_limiter = RateLimiter()
 
 
 async def check_rate_limit(request: Request):

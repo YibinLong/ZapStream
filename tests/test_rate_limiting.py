@@ -8,7 +8,7 @@ import pytest
 import time
 import os
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 
 
 @pytest.mark.api
@@ -156,15 +156,14 @@ class TestRateLimiting:
     @pytest.mark.asyncio
     async def test_rate_limit_concurrent_requests(self, test_app, sample_event_payload, valid_api_key):
         """Test rate limiting with concurrent requests."""
-        from httpx import AsyncClient
-
         # Set low rate limit for testing
         original_rate_limit = os.environ.get("RATE_LIMIT_PER_MINUTE")
         os.environ["RATE_LIMIT_PER_MINUTE"] = "2"
 
         try:
             base_url = "http://test"
-            async with AsyncClient(app=test_app, base_url=base_url) as client:
+            transport = ASGITransport(app=test_app)
+            async with AsyncClient(transport=transport, base_url=base_url) as client:
 
                 async def make_request(suffix: int):
                     headers = {

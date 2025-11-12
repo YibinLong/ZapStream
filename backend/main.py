@@ -4,11 +4,10 @@ from fastapi.exceptions import RequestValidationError
 import os
 import uuid
 from contextlib import asynccontextmanager
-from typing import Dict
-
 from .logging import setup_logging
 from .config import get_settings
 from .storage import get_storage_backend
+from .rate_limit import reset_rate_limiter
 from .error_handlers import (
     zapstream_exception_handler,
     http_exception_handler,
@@ -21,7 +20,7 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize storage backend
+    storage = None
     logger.info("Initializing storage backend...")
     try:
         storage = get_storage_backend()
@@ -32,13 +31,25 @@ async def lifespan(app: FastAPI):
         await storage.initialize()
         logger.info("Database tables created")
 
+        # Reset rate limiter to ensure clean buckets on startup
+        reset_rate_limiter()
+        logger.info("Rate limiter reset")
+
     except Exception as e:
         logger.error(f"Failed to initialize storage backend: {e}")
         raise
 
     logger.info("FastAPI application starting up...")
-    yield
-    logger.info("FastAPI application shutting down...")
+    try:
+        yield
+    finally:
+        logger.info("FastAPI application shutting down...")
+        if storage:
+            try:
+                await storage.close()
+                logger.info("Storage backend closed")
+            except Exception as exc:  # pragma: no cover - logging only
+                logger.error(f"Failed to close storage backend cleanly: {exc}")
 
 app = FastAPI(
     title="Zapier Triggers API",
@@ -100,7 +111,9 @@ async def add_request_context(request, call_next):
 # Register exception handlers
 from .error_handlers import ZapStreamException
 
+from fastapi import HTTPException
 app.add_exception_handler(ZapStreamException, zapstream_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 

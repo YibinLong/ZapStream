@@ -4,7 +4,7 @@ Health check API routes for ZapStream Backend.
 Provides health status and diagnostics information.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from starlette.requests import Request
 
@@ -65,7 +65,7 @@ async def detailed_health_check(request: Request):
             "status": "healthy" if storage_healthy else "unhealthy",
             "service": "ZapStream Backend",
             "version": "1.0.0",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "environment": settings.app_env,
             "components": {
                 "storage": {
@@ -79,6 +79,6 @@ async def detailed_health_check(request: Request):
             "status": "unhealthy",
             "service": "ZapStream Backend",
             "version": "1.0.0",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "error": str(e)
         }

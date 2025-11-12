@@ -19,13 +19,12 @@ export function ApiPlayground() {
   const [payload, setPayload] = useState(
     JSON.stringify(
       {
-        event_type: "user.login",
-        user_id: "usr_123",
-        timestamp: new Date().toISOString(),
-        metadata: {
-          ip: "192.168.1.1",
-          device: "Chrome/MacOS",
-        },
+        source: "test_frontend",
+        type: "connection.test",
+        topic: "integration",
+        payload: {
+          message: "Testing frontend-backend connection"
+        }
       },
       null,
       2,

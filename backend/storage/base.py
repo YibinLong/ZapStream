@@ -25,11 +25,11 @@ class StorageInterface(ABC):
     @abstractmethod
     async def create_event(
         self,
-        tenant_id: str,
-        source: Optional[str],
-        event_type: Optional[str],
-        topic: Optional[str],
-        payload: Dict[str, Any],
+        tenant_id: Optional[str] = None,
+        source: Optional[str] = None,
+        event_type: Optional[str] = None,
+        topic: Optional[str] = None,
+        payload: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None
     ) -> Event:
         """

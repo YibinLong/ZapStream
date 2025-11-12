@@ -40,7 +40,7 @@ class ValidationException(ZapStreamException):
         super().__init__(
             code="VALIDATION_ERROR",
             message=message,
-            status_code=400,
+            status_code=422,
             details=details
         )
 
@@ -98,7 +98,8 @@ def create_error_response(
     code: str,
     message: str,
     request_id: str = None,
-    details: Dict[str, Any] = None
+    details: Dict[str, Any] = None,
+    status_code: int | None = None
 ) -> JSONResponse:
     """Create a standardized error response."""
 
@@ -114,7 +115,7 @@ def create_error_response(
         error_content.update(details)
 
     return JSONResponse(
-        status_code=get_status_code_for_error(code),
+        status_code=status_code or get_status_code_for_error(code),
         content=ErrorResponse(error=error_content).model_dump()
     )
 
@@ -123,7 +124,7 @@ def get_status_code_for_error(code: str) -> int:
     """Map error codes to HTTP status codes."""
 
     status_map = {
-        "VALIDATION_ERROR": 400,
+        "VALIDATION_ERROR": 422,
         "AUTHENTICATION_ERROR": 401,
         "FORBIDDEN": 403,
         "NOT_FOUND": 404,
@@ -182,7 +183,8 @@ async def zapstream_exception_handler(request: Request, exc: ZapStreamException)
         code=exc.code,
         message=exc.message,
         request_id=request_id,
-        details=exc.details if exc.details else None
+        details=exc.details if exc.details else None,
+        status_code=exc.status_code
     )
 
 
@@ -212,7 +214,8 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     return create_error_response(
         code=error_code,
         message=str(exc.detail),
-        request_id=request_id
+        request_id=request_id,
+        status_code=exc.status_code
     )
 
 
@@ -245,7 +248,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         code="VALIDATION_ERROR",
         message=message,
         request_id=request_id,
-        details=details
+        details=details,
+        status_code=422
     )
 
 
@@ -267,5 +271,6 @@ async def general_exception_handler(request: Request, exc: Exception):
     return create_error_response(
         code="INTERNAL_ERROR",
         message=message,
-        request_id=request_id
+        request_id=request_id,
+        status_code=500
     )
