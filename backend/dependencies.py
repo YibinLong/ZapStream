@@ -24,9 +24,7 @@ def _storage_signature() -> tuple[str, str | None]:
     return (settings.storage_backend, settings.aws_dynamodb_table)
 
 
-async def get_current_tenant(
-    request: Request
-) -> str:
+async def get_current_tenant(request: Request) -> str:
     """
     Dependency to get the current tenant ID from an authenticated request.
 
@@ -42,9 +40,7 @@ async def get_current_tenant(
     return get_current_tenant_id(request)
 
 
-async def get_storage(
-    request: Request
-) -> StorageInterface:
+async def get_storage(request: Request) -> StorageInterface:
     """
     Dependency to get the storage backend instance.
 
@@ -97,5 +93,5 @@ __all__ = [
     "get_storage",
     "TenantId",
     "StorageBackend",
-    "AuthenticatedTenant"
+    "AuthenticatedTenant",
 ]

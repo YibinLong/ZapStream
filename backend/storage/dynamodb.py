@@ -1,6 +1,5 @@
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
-import asyncio
 
 from ..models import Event
 from .base import StorageInterface
@@ -36,7 +35,7 @@ class DynamoDBStorage(StorageInterface):
         event_type: Optional[str],
         topic: Optional[str],
         payload: Dict[str, Any],
-        idempotency_key: Optional[str] = None
+        idempotency_key: Optional[str] = None,
     ) -> Event:
         """Create a new event in DynamoDB."""
         # TODO: Implement DynamoDB PutItem operation
@@ -54,9 +53,7 @@ class DynamoDBStorage(StorageInterface):
         raise NotImplementedError("DynamoDB storage not fully implemented")
 
     async def get_by_idempotency(
-        self,
-        tenant_id: str,
-        idempotency_key: str
+        self, tenant_id: str, idempotency_key: str
     ) -> Optional[Event]:
         """Get event by idempotency key and tenant."""
         # TODO: Implement DynamoDB query using GSI on idempotency key
@@ -71,7 +68,7 @@ class DynamoDBStorage(StorageInterface):
         since: Optional[datetime] = None,
         topic: Optional[str] = None,
         event_type: Optional[str] = None,
-        cursor: Optional[str] = None
+        cursor: Optional[str] = None,
     ) -> Tuple[List[Event], Optional[str]]:
         """Get pending events for a tenant."""
         # TODO: Implement DynamoDB Query operation

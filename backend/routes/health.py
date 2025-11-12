@@ -5,11 +5,10 @@ Provides health status and diagnostics information.
 """
 
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from starlette.requests import Request
 
 from ..models import HealthResponse
-from ..dependencies import StorageBackend
 from ..config import get_settings
 
 router = APIRouter()
@@ -33,9 +32,7 @@ async def health_check(request: Request):
     # Basic health check - in a real implementation, you might want to
     # check database connectivity, external dependencies, etc.
     return HealthResponse(
-        status="healthy",
-        service="ZapStream Backend",
-        version="1.0.0"
+        status="healthy", service="ZapStream Backend", version="1.0.0"
     )
 
 
@@ -70,9 +67,9 @@ async def detailed_health_check(request: Request):
             "components": {
                 "storage": {
                     "type": storage_type,
-                    "status": "healthy" if storage_healthy else "unhealthy"
+                    "status": "healthy" if storage_healthy else "unhealthy",
                 }
-            }
+            },
         }
     except Exception as e:
         return {
@@ -80,5 +77,5 @@ async def detailed_health_check(request: Request):
             "service": "ZapStream Backend",
             "version": "1.0.0",
             "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            "error": str(e)
+            "error": str(e),
         }

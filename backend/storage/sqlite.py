@@ -1,10 +1,6 @@
 import os
-import sqlite3
-import json
-import asyncio
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlparse
 
 from sqlmodel import create_engine, Session, select, and_, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -32,7 +28,7 @@ class SQLiteStorage(StorageInterface):
             self.database_url = configured_url
         else:
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            db_path = os.path.join(current_dir, 'data', 'events.db')
+            db_path = os.path.join(current_dir, "data", "events.db")
             # Ensure data directory exists
             db_dir = os.path.dirname(db_path)
             os.makedirs(db_dir, exist_ok=True)
@@ -47,12 +43,12 @@ class SQLiteStorage(StorageInterface):
 
     async def initialize(self):
         """Initialize database tables."""
-        from ..models import Event
 
         # Create tables using sync engine (simpler for initialization)
         with Session(self.sync_engine) as session:
             # Import SQLModel metadata and create tables
             from sqlmodel import SQLModel
+
             SQLModel.metadata.create_all(self.sync_engine)
 
     async def create_event(
@@ -62,7 +58,7 @@ class SQLiteStorage(StorageInterface):
         event_type: Optional[str] = None,
         topic: Optional[str] = None,
         payload: Optional[Dict[str, Any]] = None,
-        idempotency_key: Optional[str] = None
+        idempotency_key: Optional[str] = None,
     ) -> Event:
         """Create a new event in SQLite storage."""
 
@@ -124,7 +120,7 @@ class SQLiteStorage(StorageInterface):
                 payload=payload,
                 delivered=False,
                 status=EventStatus.PENDING,
-                idempotency_key=idempotency_key
+                idempotency_key=idempotency_key,
             )
 
         async with AsyncSession(self.engine) as session:
@@ -134,7 +130,9 @@ class SQLiteStorage(StorageInterface):
             except IntegrityError as exc:
                 await session.rollback()
                 if idempotency_key:
-                    raise ValueError(f"Idempotency key already exists: {idempotency_key}") from exc
+                    raise ValueError(
+                        f"Idempotency key already exists: {idempotency_key}"
+                    ) from exc
                 raise
             await session.refresh(event)
             return event
@@ -146,16 +144,14 @@ class SQLiteStorage(StorageInterface):
                 and_(
                     Event.id == event_id,
                     Event.tenant_id == tenant_id,
-                    Event.status != EventStatus.DELETED
+                    Event.status != EventStatus.DELETED,
                 )
             )
             result = await session.exec(statement)
             return result.first()
 
     async def get_by_idempotency(
-        self,
-        tenant_id: str,
-        idempotency_key: str
+        self, tenant_id: str, idempotency_key: str
     ) -> Optional[Event]:
         """Get event by idempotency key and tenant."""
         async with AsyncSession(self.engine) as session:
@@ -163,7 +159,7 @@ class SQLiteStorage(StorageInterface):
                 and_(
                     Event.tenant_id == tenant_id,
                     Event.idempotency_key == idempotency_key,
-                    Event.status != EventStatus.DELETED
+                    Event.status != EventStatus.DELETED,
                 )
             )
             result = await session.exec(statement)
@@ -176,7 +172,7 @@ class SQLiteStorage(StorageInterface):
         since: Optional[datetime] = None,
         topic: Optional[str] = None,
         event_type: Optional[str] = None,
-        cursor: Optional[str] = None
+        cursor: Optional[str] = None,
     ) -> Tuple[List[Event], Optional[str]]:
         """Get pending (undelivered) events for a tenant."""
 
@@ -201,7 +197,7 @@ class SQLiteStorage(StorageInterface):
             conditions = [
                 Event.tenant_id == tenant_id,
                 Event.delivered == False,
-                Event.status == EventStatus.PENDING
+                Event.status == EventStatus.PENDING,
             ]
 
             # Add filters
@@ -218,9 +214,8 @@ class SQLiteStorage(StorageInterface):
                     or_(
                         Event.created_at > cursor_created_at,
                         and_(
-                            Event.created_at == cursor_created_at,
-                            Event.id > cursor_id
-                        )
+                            Event.created_at == cursor_created_at, Event.id > cursor_id
+                        ),
                     )
                 )
 
@@ -251,7 +246,7 @@ class SQLiteStorage(StorageInterface):
                 and_(
                     Event.id == event_id,
                     Event.tenant_id == tenant_id,
-                    Event.status == EventStatus.PENDING
+                    Event.status == EventStatus.PENDING,
                 )
             )
             result = await session.exec(statement)
@@ -276,7 +271,7 @@ class SQLiteStorage(StorageInterface):
                 and_(
                     Event.id == event_id,
                     Event.tenant_id == tenant_id,
-                    Event.status.in_([EventStatus.PENDING, EventStatus.ACKNOWLEDGED])
+                    Event.status.in_([EventStatus.PENDING, EventStatus.ACKNOWLEDGED]),
                 )
             )
             result = await session.exec(statement)
@@ -297,13 +292,10 @@ class SQLiteStorage(StorageInterface):
         cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=ttl_minutes)
 
         async with AsyncSession(self.engine) as session:
-            statement = (
-                select(Event)
-                .where(
-                    and_(
-                        Event.status.in_([EventStatus.ACKNOWLEDGED, EventStatus.DELETED]),
-                        Event.updated_at < cutoff_time
-                    )
+            statement = select(Event).where(
+                and_(
+                    Event.status.in_([EventStatus.ACKNOWLEDGED, EventStatus.DELETED]),
+                    Event.updated_at < cutoff_time,
                 )
             )
             result = await session.exec(statement)
@@ -328,7 +320,7 @@ class SQLiteStorage(StorageInterface):
 
     async def close(self) -> None:
         """Close the database engine and cleanup resources."""
-        if hasattr(self, 'engine') and self.engine:
+        if hasattr(self, "engine") and self.engine:
             await self.engine.dispose()
-        if hasattr(self, 'sync_engine') and self.sync_engine:
+        if hasattr(self, "sync_engine") and self.sync_engine:
             self.sync_engine.dispose()

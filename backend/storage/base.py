@@ -30,7 +30,7 @@ class StorageInterface(ABC):
         event_type: Optional[str] = None,
         topic: Optional[str] = None,
         payload: Optional[Dict[str, Any]] = None,
-        idempotency_key: Optional[str] = None
+        idempotency_key: Optional[str] = None,
     ) -> Event:
         """
         Create a new event in storage.
@@ -67,9 +67,7 @@ class StorageInterface(ABC):
 
     @abstractmethod
     async def get_by_idempotency(
-        self,
-        tenant_id: str,
-        idempotency_key: str
+        self, tenant_id: str, idempotency_key: str
     ) -> Optional[Event]:
         """
         Get event by idempotency key and tenant.
@@ -91,7 +89,7 @@ class StorageInterface(ABC):
         since: Optional[datetime] = None,
         topic: Optional[str] = None,
         event_type: Optional[str] = None,
-        cursor: Optional[str] = None
+        cursor: Optional[str] = None,
     ) -> tuple[List[Event], Optional[str]]:
         """
         Get pending (undelivered) events for a tenant.

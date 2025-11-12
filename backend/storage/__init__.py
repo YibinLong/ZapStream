@@ -30,4 +30,9 @@ def get_storage_backend() -> StorageInterface:
         raise ValueError(f"Unsupported storage backend: {settings.storage_backend}")
 
 
-__all__ = ["StorageInterface", "get_storage_backend", "SQLiteStorage", "DynamoDBStorage"]
+__all__ = [
+    "StorageInterface",
+    "get_storage_backend",
+    "SQLiteStorage",
+    "DynamoDBStorage",
+]

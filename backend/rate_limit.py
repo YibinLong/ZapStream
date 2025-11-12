@@ -1,5 +1,4 @@
 import time
-import asyncio
 from typing import Dict
 from threading import Lock
 from fastapi import HTTPException, Request, status
@@ -75,12 +74,14 @@ class RateLimiter:
             refill_rate = desired_capacity / 60.0
             if client_id not in self.buckets:
                 self.buckets[client_id] = TokenBucket(
-                    capacity=desired_capacity,
-                    refill_rate=refill_rate
+                    capacity=desired_capacity, refill_rate=refill_rate
                 )
             else:
                 bucket = self.buckets[client_id]
-                if bucket.capacity != desired_capacity or bucket.refill_rate != refill_rate:
+                if (
+                    bucket.capacity != desired_capacity
+                    or bucket.refill_rate != refill_rate
+                ):
                     bucket.capacity = desired_capacity
                     bucket.refill_rate = refill_rate
                     bucket.tokens = desired_capacity
@@ -151,5 +152,5 @@ async def check_rate_limit(request: Request):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Rate limit exceeded",
-            headers={"Retry-After": str(int(retry_after))}
+            headers={"Retry-After": str(int(retry_after))},
         )
