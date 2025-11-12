@@ -85,22 +85,21 @@ export class ZapStreamServerlessStack extends Stack {
       ],
     }));
 
-    // Lambda function for the FastAPI backend
+    // Lambda function for the simple backend
     const apiLambda = new lambda.Function(this, 'ZapStreamAPIFunction', {
       runtime: lambda.Runtime.PYTHON_3_11,
-      handler: 'lambda_function.lambda_handler',
+      handler: 'lambda_simple.handler',
       role: lambdaRole,
       timeout: Duration.seconds(30),
       memorySize: 512,
       environment: {
-        STORAGE_BACKEND: 'dynamodb',
         DYNAMODB_TABLE: eventsTable.tableName,
         LOG_LEVEL: 'INFO',
         CORS_ALLOWED_ORIGINS: '*',
         API_KEYS: 'dev_key_123=tenant_dev,prod_key_456=tenant_prod',
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
-      code: lambda.Code.fromAsset('../lambda.zip'), // We'll create this zip
+      code: lambda.Code.fromAsset('../lambda_simple_final.zip'),
       layers: [
         // Add Lambda layer for dependencies if needed
       ],
