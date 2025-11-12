@@ -1,67 +1,27 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { CheckCircle2, Clock, XCircle, ChevronRight, Filter } from "lucide-react"
+import { CheckCircle2, Clock, XCircle, ChevronRight, Filter, RefreshCw, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { zapStreamAPI, ZapStreamEvent, isZapStreamAPIError } from "@/lib/api"
 
-interface Event {
-  id: string
-  timestamp: string
-  status: "delivered" | "pending" | "failed"
-  payload: Record<string, unknown>
-  source?: string
+// Event interface matching the backend API
+interface Event extends ZapStreamEvent {
+  timestamp: string // Alias for created_at to match existing UI
 }
 
-// Static timestamps to prevent hydration mismatch
-const mockEvents: Event[] = [
-  {
-    id: "evt_9k2m4n5p",
-    timestamp: "2025-01-10T23:40:00.000Z",
-    status: "delivered",
-    payload: { user_id: "usr_123", action: "login", ip: "192.168.1.1" },
-    source: "auth-service",
-  },
-  {
-    id: "evt_8j1l3m4n",
-    timestamp: "2025-01-10T23:39:15.000Z",
-    status: "delivered",
-    payload: { order_id: "ord_456", total: 299.99, items: 3 },
-    source: "checkout-api",
-  },
-  {
-    id: "evt_7h0k2l3m",
-    timestamp: "2025-01-10T23:38:00.000Z",
-    status: "pending",
-    payload: { webhook_url: "https://example.com/webhook", retry_count: 2 },
-    source: "webhook-processor",
-  },
-  {
-    id: "evt_6g9j1k2l",
-    timestamp: "2025-01-10T23:37:00.000Z",
-    status: "failed",
-    payload: { error: "Connection timeout", endpoint: "/api/notify" },
-    source: "notification-service",
-  },
-  {
-    id: "evt_5f8i0j1k",
-    timestamp: "2025-01-10T23:36:00.000Z",
-    status: "delivered",
-    payload: { email: "user@example.com", template: "welcome", sent: true },
-    source: "email-service",
-  },
-]
-
+// Status configuration updated to match backend statuses
 const statusConfig = {
-  delivered: {
+  acknowledged: {
     icon: CheckCircle2,
     color: "text-success",
     bg: "bg-success/10",
     border: "border-success/30",
-    label: "Delivered",
+    label: "Acknowledged",
   },
   pending: {
     icon: Clock,
@@ -70,24 +30,112 @@ const statusConfig = {
     border: "border-warning/30",
     label: "Pending",
   },
-  failed: {
+  deleted: {
     icon: XCircle,
     color: "text-destructive",
     bg: "bg-destructive/10",
     border: "border-destructive/30",
-    label: "Failed",
+    label: "Deleted",
   },
 }
 
 export function EventLog() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-  const [events] = useState<Event[]>(mockEvents)
+  const [events, setEvents] = useState<Event[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isConnected, setIsConnected] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Convert backend event to frontend format
+  const convertEvent = (backendEvent: ZapStreamEvent): Event => ({
+    ...backendEvent,
+    timestamp: backendEvent.created_at,
+    status: backendEvent.status || 'pending',
+  })
+
+  // Fetch events from API
+  const fetchEvents = useCallback(async () => {
+    try {
+      setError(null)
+      const response = await zapStreamAPI.getInboxEvents({ limit: 50 })
+      const convertedEvents = response.events.map(convertEvent)
+      setEvents(convertedEvents)
+    } catch (err) {
+      if (isZapStreamAPIError(err)) {
+        setError(err.message)
+      } else {
+        setError('Failed to fetch events')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Set up Server-Sent Events for real-time updates
+  useEffect(() => {
+    fetchEvents()
+
+    const eventSource = zapStreamAPI.createEventStream(
+      (newEvent) => {
+        const convertedEvent = convertEvent(newEvent)
+        setEvents(prev => [convertedEvent, ...prev].slice(0, 100)) // Keep last 100 events
+      },
+      (err) => {
+        console.error('Event stream error:', err)
+        setIsConnected(false)
+      },
+      (connected) => {
+        setIsConnected(connected)
+      }
+    )
+
+    return () => {
+      if (eventSource) {
+        eventSource.close()
+      }
+    }
+  }, [fetchEvents])
+
+  // Handle event actions
+  const handleAcknowledge = async (eventId: string) => {
+    try {
+      await zapStreamAPI.acknowledgeEvent(eventId)
+      setEvents(prev =>
+        prev.map(event =>
+          event.id === eventId
+            ? { ...event, status: 'acknowledged', delivered: true }
+            : event
+        )
+      )
+    } catch (err) {
+      if (isZapStreamAPIError(err)) {
+        setError(err.message)
+      } else {
+        setError('Failed to acknowledge event')
+      }
+    }
+  }
+
+  const handleDelete = async (eventId: string) => {
+    try {
+      await zapStreamAPI.deleteEvent(eventId)
+      setEvents(prev => prev.filter(event => event.id !== eventId))
+      if (selectedEvent?.id === eventId) {
+        setSelectedEvent(null)
+      }
+    } catch (err) {
+      if (isZapStreamAPIError(err)) {
+        setError(err.message)
+      } else {
+        setError('Failed to delete event')
+      }
+    }
+  }
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)
-    // Use fixed reference time to prevent hydration mismatch
-    const referenceTime = new Date("2025-01-10T23:41:00.000Z")
-    const diff = Math.floor((referenceTime.getTime() - date.getTime()) / 1000)
+    const now = new Date()
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
 
     if (diff < 60) return `${diff}s ago`
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
@@ -99,19 +147,72 @@ export function EventLog() {
     <Card className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-balance">Event Stream</h2>
-          <p className="text-sm text-muted-foreground mt-1">Real-time event monitoring</p>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-balance">Event Stream</h2>
+            {isConnected ? (
+              <div className="flex items-center gap-1 text-xs text-success">
+                <div className="h-2 w-2 bg-success rounded-full animate-pulse"></div>
+                Live
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <div className="h-2 w-2 bg-muted rounded-full"></div>
+                Offline
+              </div>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isLoading ? "Loading events..." : `Real-time event monitoring (${events.length} events)`}
+          </p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-          <Filter className="h-4 w-4" />
-          Filter
-        </Button>
+        <div className="flex items-center gap-2">
+          {error && (
+            <div className="flex items-center gap-1 text-xs text-destructive">
+              <AlertCircle className="h-3 w-3" />
+              {error}
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 bg-transparent"
+            onClick={fetchEvents}
+            disabled={isLoading}
+          >
+            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="h-[600px] pr-4">
-        <div className="space-y-3">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Loading events...
+            </div>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-32 text-center">
+            <AlertCircle className="h-8 w-8 text-destructive mb-2" />
+            <p className="text-sm text-destructive mb-2">Failed to load events</p>
+            <Button variant="outline" size="sm" onClick={fetchEvents}>
+              Try Again
+            </Button>
+          </div>
+        ) : events.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 text-center">
+            <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center mb-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">No events found</p>
+            <p className="text-xs text-muted-foreground mt-1">New events will appear here automatically</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
           {events.map((event, index) => {
-            const config = statusConfig[event.status]
+            const config = statusConfig[event.status || 'pending']
             const Icon = config.icon
             const isSelected = selectedEvent?.id === event.id
 
@@ -172,6 +273,28 @@ export function EventLog() {
                           {JSON.stringify(event.payload, null, 2)}
                         </pre>
                       </div>
+                      {event.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => handleAcknowledge(event.id)}
+                          >
+                            <CheckCircle2 className="h-3 w-3" />
+                            Acknowledge
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2 text-destructive hover:text-destructive"
+                            onClick={() => handleDelete(event.id)}
+                          >
+                            <XCircle className="h-3 w-3" />
+                            Delete
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -179,6 +302,7 @@ export function EventLog() {
             )
           })}
         </div>
+      )}
       </ScrollArea>
     </Card>
   )
