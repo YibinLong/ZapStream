@@ -5,7 +5,7 @@ Handles event listing, acknowledgment, deletion, and real-time streaming with te
 """
 
 from typing import Annotated, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import json
 import asyncio
 from fastapi import APIRouter, HTTPException, Query, status, Path, Request
@@ -17,6 +17,18 @@ from ..rate_limit import check_rate_limit
 from ..auth import get_api_key_for_sse
 
 router = APIRouter()
+
+
+def _rfc3339(dt: datetime) -> str:
+    """
+    Format datetime as RFC3339 with milliseconds and Z suffix.
+    Ensures timezone-aware UTC output suitable for JS Date parsing.
+    """
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace(
+        "+00:00", "Z"
+    )
 
 
 def decode_cursor(cursor: Optional[str]) -> Optional[tuple]:
@@ -121,6 +133,7 @@ async def list_inbox_events(
             topic=topic,
             event_type=type,
             cursor=cursor_data,
+            order="desc",
         )
 
         # Convert to response format
@@ -129,7 +142,7 @@ async def list_inbox_events(
             event_items.append(
                 {
                     "id": event.id,
-                    "created_at": event.created_at.isoformat().replace("+00:00", "Z"),
+                    "created_at": _rfc3339(event.created_at),
                     "source": event.source,
                     "type": event.type,
                     "topic": event.topic,
@@ -354,6 +367,7 @@ async def stream_events(
                         topic=None,
                         event_type=None,
                         cursor=None,
+                        order="asc",
                     )
 
                     # Send each new event as an SSE message
@@ -366,7 +380,7 @@ async def stream_events(
                         if event_time > last_seen:
                             event_data = {
                                 "id": event.id,
-                                "created_at": event.created_at.isoformat(),
+                                "created_at": _rfc3339(event.created_at),
                                 "source": event.source,
                                 "type": event.type,
                                 "topic": event.topic,

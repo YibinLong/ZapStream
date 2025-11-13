@@ -1,5 +1,5 @@
 import os
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any, Tuple, Literal
 from datetime import datetime, timedelta, timezone
 
 from sqlmodel import create_engine, Session, select, and_, or_, func
@@ -173,11 +173,15 @@ class SQLiteStorage(StorageInterface):
         topic: Optional[str] = None,
         event_type: Optional[str] = None,
         cursor: Optional[str] = None,
+        order: Literal["asc", "desc"] = "desc",
     ) -> Tuple[List[Event], Optional[str]]:
         """Get pending (undelivered) events for a tenant."""
 
         # Limit validation
         limit = min(max(1, limit), 500)
+
+        if order not in ("asc", "desc"):
+            raise ValueError("order must be either 'asc' or 'desc'")
 
         # Parse cursor
         cursor_created_at = None
@@ -213,19 +217,36 @@ class SQLiteStorage(StorageInterface):
 
             # Add cursor filter
             if cursor_created_at and cursor_id:
-                conditions.append(
-                    or_(
-                        Event.created_at > cursor_created_at,
-                        and_(
-                            Event.created_at == cursor_created_at, Event.id > cursor_id
-                        ),
+                if order == "asc":
+                    conditions.append(
+                        or_(
+                            Event.created_at > cursor_created_at,
+                            and_(
+                                Event.created_at == cursor_created_at,
+                                Event.id > cursor_id,
+                            ),
+                        )
                     )
-                )
+                else:
+                    conditions.append(
+                        or_(
+                            Event.created_at < cursor_created_at,
+                            and_(
+                                Event.created_at == cursor_created_at,
+                                Event.id < cursor_id,
+                            ),
+                        )
+                    )
+
+            if order == "asc":
+                ordering = (Event.created_at.asc(), Event.id.asc())
+            else:
+                ordering = (Event.created_at.desc(), Event.id.desc())
 
             statement = (
                 select(Event)
                 .where(and_(*conditions))
-                .order_by(Event.created_at.asc(), Event.id.asc())
+                .order_by(*ordering)
                 .limit(limit + 1)  # Get one extra to determine if there's a next page
             )
 

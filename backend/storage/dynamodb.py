@@ -69,6 +69,7 @@ class DynamoDBStorage(StorageInterface):
         topic: Optional[str] = None,
         event_type: Optional[str] = None,
         cursor: Optional[str] = None,
+        order: str = "desc",
     ) -> Tuple[List[Event], Optional[str]]:
         """Get pending events for a tenant."""
         # TODO: Implement DynamoDB Query operation

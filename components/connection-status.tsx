@@ -215,9 +215,9 @@ export function ConnectionStatus() {
             </p>
             <button
               onClick={checkHealth}
-              className="text-xs text-primary hover:text-primary/80 mt-1 underline"
+              className="text-xs text-accent hover:text-accent/80 mt-1 font-medium"
             >
-              Check now
+              Check now →
             </button>
           </div>
         </div>

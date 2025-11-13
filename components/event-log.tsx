@@ -59,6 +59,8 @@ export function EventLog() {
       setError(null)
       const response = await zapStreamAPI.getInboxEvents({ limit: 50 })
       const convertedEvents = response.events.map(convertEvent)
+      // Sort by created_at DESC (newest first)
+      convertedEvents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       setEvents(convertedEvents)
     } catch (err) {
       if (isZapStreamAPIError(err)) {
@@ -93,6 +95,22 @@ export function EventLog() {
       if (eventSource) {
         eventSource.close()
       }
+    }
+  }, [fetchEvents])
+
+  // Refetch events when component becomes visible (e.g., switching tabs)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Tab became visible, refetch events
+        fetchEvents()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [fetchEvents])
 
@@ -137,6 +155,9 @@ export function EventLog() {
     const now = new Date()
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
 
+    // Handle future timestamps (shouldn't happen but just in case)
+    if (diff < 0) return 'just now'
+    
     if (diff < 60) return `${diff}s ago`
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
@@ -217,9 +238,8 @@ export function EventLog() {
             const isSelected = selectedEvent?.id === event.id
 
             return (
-              <button
+              <div
                 key={event.id}
-                onClick={() => setSelectedEvent(event)}
                 style={{ animationDelay: `${index * 50}ms` }}
                 className={cn(
                   "w-full text-left p-4 rounded-lg border transition-all duration-200 hover:shadow-md group animate-slide-up",
@@ -228,37 +248,48 @@ export function EventLog() {
                     : "border-border bg-card hover:border-primary/40",
                 )}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 flex-1">
-                    <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg", config.bg)}>
-                      <Icon className={cn("h-4 w-4", config.color)} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-mono text-sm font-medium">{event.id}</p>
-                        <Badge variant="outline" className={cn("text-xs", config.border, config.bg)}>
-                          {config.label}
-                        </Badge>
+                <button
+                  onClick={() => setSelectedEvent(isSelected ? null : event)}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg", config.bg)}>
+                        <Icon className={cn("h-4 w-4", config.color)} />
                       </div>
-                      {event.source && <p className="text-xs text-muted-foreground mb-2">{event.source}</p>}
-                      <p className="text-xs text-muted-foreground font-mono truncate">
-                        {JSON.stringify(event.payload).substring(0, 80)}...
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-semibold">{event.source || 'Unknown Source'}</p>
+                          <Badge variant="outline" className={cn("text-xs", config.border, config.bg)}>
+                            {config.label}
+                          </Badge>
+                        </div>
+                        {event.type && <p className="text-xs text-muted-foreground mb-1">{event.type}</p>}
+                        <p className="text-xs text-muted-foreground font-mono truncate">
+                          {JSON.stringify(event.payload).substring(0, 80)}...
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatTime(event.timestamp)}
+                      </span>
+                      <ChevronRight
+                        className={cn("h-4 w-4 text-muted-foreground transition-transform", isSelected && "rotate-90")}
+                      />
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatTime(event.timestamp)}
-                    </span>
-                    <ChevronRight
-                      className={cn("h-4 w-4 text-muted-foreground transition-transform", isSelected && "rotate-90")}
-                    />
-                  </div>
-                </div>
+                </button>
 
                 {isSelected && (
                   <div className="mt-4 pt-4 border-t border-border animate-slide-up">
                     <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Event ID
+                        </label>
+                        <p className="text-xs font-mono mt-1">{event.id}</p>
+                      </div>
                       <div>
                         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Timestamp
@@ -275,30 +306,32 @@ export function EventLog() {
                       </div>
                       {event.status === 'pending' && (
                         <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-2"
-                            onClick={() => handleAcknowledge(event.id)}
+                          <button
+                            className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleAcknowledge(event.id)
+                            }}
                           >
                             <CheckCircle2 className="h-3 w-3" />
                             Acknowledge
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-2 text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(event.id)}
+                          </button>
+                          <button
+                            className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(event.id)
+                            }}
                           >
                             <XCircle className="h-3 w-3" />
                             Delete
-                          </Button>
+                          </button>
                         </div>
                       )}
                     </div>
                   </div>
                 )}
-              </button>
+              </div>
             )
           })}
         </div>

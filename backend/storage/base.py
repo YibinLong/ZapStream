@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime
 
 from ..models import Event
@@ -90,6 +90,7 @@ class StorageInterface(ABC):
         topic: Optional[str] = None,
         event_type: Optional[str] = None,
         cursor: Optional[str] = None,
+        order: Literal["asc", "desc"] = "desc",
     ) -> tuple[List[Event], Optional[str]]:
         """
         Get pending (undelivered) events for a tenant.
@@ -101,6 +102,8 @@ class StorageInterface(ABC):
             topic: Optional topic filter
             event_type: Optional event type filter
             cursor: Optional pagination cursor
+            order: Sort order for results. "desc" returns newest first (default),
+                "asc" returns oldest first.
 
         Returns:
             tuple[List[Event], Optional[str]]: Events and next cursor
