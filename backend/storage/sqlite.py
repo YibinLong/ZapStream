@@ -182,7 +182,10 @@ class SQLiteStorage(StorageInterface):
         # Parse cursor
         cursor_created_at = None
         cursor_id = None
-        if cursor:
+        if cursor and isinstance(cursor, tuple) and len(cursor) == 2:
+            cursor_created_at, cursor_id = cursor
+        elif cursor and isinstance(cursor, str):
+            # Fallback for string cursor (backward compatibility)
             try:
                 cursor_parts = cursor.split("|")
                 if len(cursor_parts) == 2:
