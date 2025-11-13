@@ -47,6 +47,10 @@ export function ApiPlayground() {
   const [response, setResponse] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [lastRequest, setLastRequest] = useState<RequestDetails | null>(null)
+  
+  // Get the actual API URL and key being used (same as the API client)
+  const apiBaseURL = process.env.NEXT_PUBLIC_ZAPSTREAM_API_URL || 'http://localhost:8000'
+  const apiKey = process.env.NEXT_PUBLIC_ZAPSTREAM_API_KEY || 'dev_key_123'
 
   const handleSendRequest = async () => {
     setIsLoading(true)
@@ -95,7 +99,7 @@ export function ApiPlayground() {
         timestamp: new Date().toISOString(),
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer dev_key_123",
+          "Authorization": `Bearer ${apiKey}`,
         }
       })
 
@@ -119,7 +123,7 @@ export function ApiPlayground() {
         timestamp: new Date().toISOString(),
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer dev_key_123",
+          "Authorization": `Bearer ${apiKey}`,
         }
       })
 
@@ -152,7 +156,7 @@ export function ApiPlayground() {
     })
   }
 
-  // Command examples organized by action
+  // Command examples organized by action (using actual API URL and key)
   const commands = {
     create: {
       method: "POST",
@@ -164,8 +168,8 @@ export function ApiPlayground() {
         payload: { invoiceId: "inv_123", amount: 4200 }
       }, null, 2),
       description: "Create a new event",
-      curl: `curl -X POST http://localhost:8000/events \\
-  -H "Authorization: Bearer dev_key_123" \\
+      curl: `curl -X POST ${apiBaseURL}/events \\
+  -H "Authorization: Bearer ${apiKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "source": "billing",
@@ -179,24 +183,24 @@ export function ApiPlayground() {
       endpoint: "/inbox",
       payload: JSON.stringify({ limit: 10, topic: "finance" }, null, 2),
       description: "List inbox events",
-      curl: `curl "http://localhost:8000/inbox?limit=10&topic=finance" \\
-  -H "Authorization: Bearer dev_key_123"`
+      curl: `curl "${apiBaseURL}/inbox?limit=10&topic=finance" \\
+  -H "Authorization: Bearer ${apiKey}"`
     },
     acknowledge: {
       method: "POST",
       endpoint: "/inbox/{event_id}/ack",
       payload: "",
       description: "Acknowledge an event (replace {event_id})",
-      curl: `curl -X POST "http://localhost:8000/inbox/{event_id}/ack" \\
-  -H "Authorization: Bearer dev_key_123"`
+      curl: `curl -X POST "${apiBaseURL}/inbox/{event_id}/ack" \\
+  -H "Authorization: Bearer ${apiKey}"`
     },
     delete: {
       method: "DELETE",
       endpoint: "/inbox/{event_id}",
       payload: "",
       description: "Delete an event (replace {event_id})",
-      curl: `curl -X DELETE "http://localhost:8000/inbox/{event_id}" \\
-  -H "Authorization: Bearer dev_key_123"`
+      curl: `curl -X DELETE "${apiBaseURL}/inbox/{event_id}" \\
+  -H "Authorization: Bearer ${apiKey}"`
     }
   }
 
