@@ -8,6 +8,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as path from 'path';
 
 export class ZapStreamServerlessStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -88,7 +89,7 @@ export class ZapStreamServerlessStack extends Stack {
     // Lambda function for the simple backend
     const apiLambda = new lambda.Function(this, 'ZapStreamAPIFunction', {
       runtime: lambda.Runtime.PYTHON_3_11,
-      handler: 'lambda_simple.handler',
+      handler: 'lambda_fixed.handler',
       role: lambdaRole,
       timeout: Duration.seconds(30),
       memorySize: 512,
@@ -99,7 +100,7 @@ export class ZapStreamServerlessStack extends Stack {
         API_KEYS: 'dev_key_123=tenant_dev,prod_key_456=tenant_prod',
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
-      code: lambda.Code.fromAsset('../lambda_simple_final.zip'),
+      code: lambda.Code.fromAsset(path.join(__dirname, '..', '..', 'lambda_fixed')),
       layers: [
         // Add Lambda layer for dependencies if needed
       ],
