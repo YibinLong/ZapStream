@@ -1,0 +1,8 @@
+{
+  "ZapStreamServerlessStack": {
+    "ZapStreamAPIEndpoint3BBDBB46": "https://9kuup7mcac.execute-api.us-west-2.amazonaws.com/v1/",
+    "DynamoDBTableName": "ZapStreamServerlessStack-ZapStreamEventsTable5C49E7EC-6X7MQ7GYCCRI",
+    "LambdaFunctionName": "ZapStreamServerlessStack-ZapStreamAPIFunctionF01F0-Yz2PincHh1Z1",
+    "APIGatewayURL": "https://9kuup7mcac.execute-api.us-west-2.amazonaws.com/v1/"
+  }
+}
