@@ -5,12 +5,12 @@ export function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <p>© 2025 Zapier Triggers API</p>
           <a
-            href="https://github.com/zapier/triggers-api"
+            href="https://github.com/YibinLong/ZapStream"
             className="hover:text-foreground transition-colors"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Documentation
+            GitHub
           </a>
         </div>
       </div>

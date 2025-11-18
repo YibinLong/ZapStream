@@ -21,7 +21,6 @@ const statusConfig = {
     color: "text-success",
     bg: "bg-success/10",
     border: "border-success/30",
-    card: "border-success/30 bg-card",
     label: "Acknowledged",
   },
   pending: {
@@ -29,7 +28,6 @@ const statusConfig = {
     color: "text-warning",
     bg: "bg-warning/10",
     border: "border-warning/30",
-    card: "border-border bg-card",
     label: "Pending",
   },
   deleted: {
@@ -37,7 +35,6 @@ const statusConfig = {
     color: "text-destructive",
     bg: "bg-destructive/10",
     border: "border-destructive/30",
-    card: "border-destructive/40 bg-destructive/5",
     label: "Deleted",
   },
 }
@@ -49,12 +46,23 @@ export function EventLog() {
   const [isConnected, setIsConnected] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const parseTimestamp = (timestamp?: string) => {
+    if (!timestamp) return new Date()
+    const hasTimezone = /[zZ]|[+-]\d\d:\d\d$/.test(timestamp)
+    const normalized = hasTimezone ? timestamp : `${timestamp}Z`
+    return new Date(normalized)
+  }
+
   // Convert backend event to frontend format
-  const convertEvent = (backendEvent: ZapStreamEvent): Event => ({
-    ...backendEvent,
-    timestamp: backendEvent.created_at,
-    status: backendEvent.status || 'pending',
-  })
+  const convertEvent = (backendEvent: ZapStreamEvent): Event => {
+    const backendWithLegacy = backendEvent as ZapStreamEvent & { event_id?: string; eventId?: string }
+    return {
+      ...backendEvent,
+      id: backendWithLegacy.id || backendWithLegacy.event_id || backendWithLegacy.eventId || `generated-${backendEvent.created_at}`,
+      timestamp: backendEvent.created_at,
+      status: backendEvent.status || 'pending',
+    }
+  }
 
   // Fetch events from API
   const fetchEvents = useCallback(async () => {
@@ -167,7 +175,7 @@ export function EventLog() {
   }
 
   const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp)
+    const date = parseTimestamp(timestamp)
     const now = new Date()
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
 
@@ -258,10 +266,10 @@ export function EventLog() {
                 key={event.id}
                 style={{ animationDelay: `${index * 50}ms` }}
                 className={cn(
-                  "w-full text-left p-4 rounded-xl border transition-all duration-200 hover:shadow-md group animate-slide-up shadow-sm",
+                  "w-full text-left p-4 rounded-xl border transition-all duration-200 group animate-slide-up shadow-sm bg-card",
                   isSelected
-                    ? "border-primary bg-primary/5 shadow-lg"
-                    : config.card || "border-border bg-card hover:border-primary/30"
+                    ? "border-success/50 shadow-lg"
+                    : "border-border hover:border-success/30"
                 )}
               >
                 <button
@@ -283,6 +291,9 @@ export function EventLog() {
                         {event.type && <p className="text-xs text-muted-foreground mb-1">{event.type}</p>}
                         <p className="text-xs text-muted-foreground font-mono truncate">
                           {JSON.stringify(event.payload).substring(0, 80)}...
+                        </p>
+                        <p className="text-[11px] text-muted-foreground font-mono">
+                          ID: {event.id}
                         </p>
                       </div>
                     </div>
@@ -310,7 +321,7 @@ export function EventLog() {
                         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Timestamp
                         </label>
-                        <p className="text-sm mt-1">{new Date(event.timestamp).toLocaleString()}</p>
+                        <p className="text-sm mt-1">{parseTimestamp(event.timestamp).toLocaleString()}</p>
                       </div>
                       <div>
                         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
