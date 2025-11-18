@@ -28,6 +28,12 @@ class DynamoDBStorage(StorageInterface):
         # - Wait for table to be active
         pass
 
+    async def close(self):
+        """Close DynamoDB connections and cleanup resources."""
+        # TODO: Implement cleanup
+        # - Close any boto3 clients/sessions
+        pass
+
     async def create_event(
         self,
         tenant_id: str,

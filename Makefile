@@ -111,7 +111,7 @@ env-setup: ## Copy .env.example to .env for local development
 db-init: ## Initialize SQLite database for development
 	@echo "Initializing SQLite database..."
 	@mkdir -p data
-	@source .venv/bin/activate && python -c "import asyncio; from backend.storage.sqlite import SQLiteStorage; async def main(): storage = SQLiteStorage(); await storage.initialize(); print('✅ Database initialized successfully!'); asyncio.run(main())"
+	@source .venv/bin/activate && python -c "import asyncio; from backend.storage.sqlite import SQLiteStorage; storage = SQLiteStorage(); asyncio.run(storage.initialize()); print('✅ Database initialized successfully!')"
 
 db-reset: ## Reset SQLite database (delete and recreate)
 	@echo "Resetting database..."
