@@ -4,6 +4,8 @@ import boto3
 import uuid
 import decimal
 from datetime import datetime
+from boto3.dynamodb.conditions import Key, Attr
+from botocore.exceptions import ClientError
 
 def decimal_default(obj):
     """JSON serializer for DynamoDB Decimal values."""
@@ -193,23 +195,24 @@ def handler(event, context):
                         created_at_str, event_id = cursor_parts
                         exclusive_start_key = {
                             'tenant_id': tenant_id,
+                            'created_at': created_at_str,
                             'event_id': event_id
                         }
                 except Exception:
                     # Invalid cursor, ignore it
                     pass
 
-            # Use scan for now since it's simpler and more reliable
-            scan_params = {
-                'FilterExpression': 'tenant_id = :tenant_id',
-                'ExpressionAttributeValues': {':tenant_id': tenant_id},
-                'Limit': min(limit, 100)  # Cap at 100 for safety
+            query_params = {
+                'IndexName': 'TenantStatusIndex',
+                'KeyConditionExpression': Key('tenant_id').eq(tenant_id),
+                'ScanIndexForward': False,
+                'Limit': min(limit, 100)
             }
 
             if exclusive_start_key:
-                scan_params['ExclusiveStartKey'] = exclusive_start_key
+                query_params['ExclusiveStartKey'] = exclusive_start_key
 
-            response_data = table.scan(**scan_params)
+            response_data = table.query(**query_params)
 
             events = []
             for item in response_data.get('Items', []):
@@ -225,10 +228,8 @@ def handler(event, context):
             last_evaluated_key = response_data.get('LastEvaluatedKey')
             if last_evaluated_key:
                 import base64
-                last_item = events[-1] if events else None
-                if last_item:
-                    cursor_data = f"{last_item['created_at']}|{last_item['event_id']}"
-                    next_cursor = base64.b64encode(cursor_data.encode('utf-8')).decode('utf-8')
+                cursor_data = f"{last_evaluated_key['created_at']}|{last_evaluated_key['event_id']}"
+                next_cursor = base64.b64encode(cursor_data.encode('utf-8')).decode('utf-8')
 
             return response(200, {
                 'events': events,
@@ -291,9 +292,14 @@ def handler(event, context):
                 Key={'tenant_id': tenant_id, 'event_id': event_id},
                 UpdateExpression='SET #status = :status',
                 ExpressionAttributeNames={'#status': 'status'},
-                ExpressionAttributeValues={':status': 'acknowledged'}
+                ExpressionAttributeValues={':status': 'acknowledged'},
+                ConditionExpression=Attr('event_id').exists()
             )
             return response(200, {'event_id': event_id, 'status': 'acknowledged'})
+        except ClientError as e:
+            if e.response.get('Error', {}).get('Code') == 'ConditionalCheckFailedException':
+                return response(404, {'error': f'Event {event_id} not found'})
+            return response(500, {'error': f'Internal server error: {str(e)}'})
         except Exception as e:
             return response(500, {'error': f'Internal server error: {str(e)}'})
 
@@ -305,8 +311,15 @@ def handler(event, context):
 
         event_id = path.split('/')[2]
         try:
-            table.delete_item(Key={'tenant_id': tenant_id, 'event_id': event_id})
+            table.delete_item(
+                Key={'tenant_id': tenant_id, 'event_id': event_id},
+                ConditionExpression=Attr('event_id').exists()
+            )
             return response(200, {'event_id': event_id, 'status': 'deleted'})
+        except ClientError as e:
+            if e.response.get('Error', {}).get('Code') == 'ConditionalCheckFailedException':
+                return response(404, {'error': f'Event {event_id} not found'})
+            return response(500, {'error': f'Internal server error: {str(e)}'})
         except Exception as e:
             return response(500, {'error': f'Internal server error: {str(e)}'})
 

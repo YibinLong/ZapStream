@@ -1,11 +1,11 @@
 import { NavHeader } from "@/components/nav-header"
-import { StatCard } from "@/components/stat-card"
 import { EventLog } from "@/components/event-log"
 import { ApiPlayground } from "@/components/api-playground"
 import { ConnectionStatus } from "@/components/connection-status"
 import { Footer } from "@/components/footer"
-import { Activity, Zap, Clock, TrendingUp } from "lucide-react"
+import { Activity, Zap } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { LiveStats } from "@/components/live-stats"
 
 export default function HomePage() {
   return (
@@ -25,39 +25,7 @@ export default function HomePage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="Events Today"
-            value="12,458"
-            description="Total events processed"
-            icon={Zap}
-            trend={{ value: "12.5%", positive: true }}
-            iconColor="text-primary"
-          />
-          <StatCard
-            title="Active Triggers"
-            value="247"
-            description="Currently listening"
-            icon={Activity}
-            trend={{ value: "8.2%", positive: true }}
-            iconColor="text-accent"
-          />
-          <StatCard
-            title="Avg Response Time"
-            value="45ms"
-            description="Sub-100ms target"
-            icon={Clock}
-            trend={{ value: "5.1%", positive: true }}
-            iconColor="text-success"
-          />
-          <StatCard
-            title="Success Rate"
-            value="99.9%"
-            description="Delivery guarantee"
-            icon={TrendingUp}
-            iconColor="text-success"
-          />
-        </div>
+        <LiveStats />
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="dashboard" className="w-full">

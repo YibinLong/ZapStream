@@ -21,6 +21,7 @@ const statusConfig = {
     color: "text-success",
     bg: "bg-success/10",
     border: "border-success/30",
+    card: "border-success/30 bg-card",
     label: "Acknowledged",
   },
   pending: {
@@ -28,6 +29,7 @@ const statusConfig = {
     color: "text-warning",
     bg: "bg-warning/10",
     border: "border-warning/30",
+    card: "border-border bg-card",
     label: "Pending",
   },
   deleted: {
@@ -35,6 +37,7 @@ const statusConfig = {
     color: "text-destructive",
     bg: "bg-destructive/10",
     border: "border-destructive/30",
+    card: "border-destructive/40 bg-destructive/5",
     label: "Deleted",
   },
 }
@@ -255,10 +258,10 @@ export function EventLog() {
                 key={event.id}
                 style={{ animationDelay: `${index * 50}ms` }}
                 className={cn(
-                  "w-full text-left p-4 rounded-lg border transition-all duration-200 hover:shadow-md group animate-slide-up",
+                  "w-full text-left p-4 rounded-xl border transition-all duration-200 hover:shadow-md group animate-slide-up shadow-sm",
                   isSelected
-                    ? "border-primary bg-primary/5 shadow-sm"
-                    : "border-border bg-card hover:border-primary/40",
+                    ? "border-primary bg-primary/5 shadow-lg"
+                    : config.card || "border-border bg-card hover:border-primary/30"
                 )}
               >
                 <button

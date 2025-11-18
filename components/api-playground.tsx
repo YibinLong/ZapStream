@@ -141,11 +141,31 @@ export function ApiPlayground() {
   }
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast({
-      title: "Copied!",
-      description: "Command copied to clipboard",
-    })
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text)
+      } else {
+        const textarea = document.createElement("textarea")
+        textarea.value = text
+        textarea.style.position = "fixed"
+        textarea.style.left = "-9999px"
+        document.body.appendChild(textarea)
+        textarea.focus()
+        textarea.select()
+        document.execCommand("copy")
+        document.body.removeChild(textarea)
+      }
+      toast({
+        title: "Copied!",
+        description: "Command copied to clipboard",
+      })
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "Unable to copy command to clipboard",
+        variant: "destructive",
+      })
+    }
   }
 
   // Load command into playground
@@ -184,9 +204,9 @@ export function ApiPlayground() {
     list: {
       method: "GET",
       endpoint: "/inbox",
-      payload: JSON.stringify({ limit: 10, topic: "finance" }, null, 2),
-      description: "List inbox events",
-      curl: `curl "${apiBaseURL}/inbox?limit=10&topic=finance" \\
+      payload: JSON.stringify({ limit: 10 }, null, 2),
+      description: "List latest inbox events",
+      curl: `curl "${apiBaseURL}/inbox?limit=10" \\
   -H "Authorization: Bearer ${apiKey}"`
     },
     acknowledge: {
@@ -257,7 +277,7 @@ export function ApiPlayground() {
                 value={payload}
                 onChange={(e) => setPayload(e.target.value)}
                 className="font-mono text-sm min-h-[200px]"
-                placeholder={method === "GET" ? '{"limit": 10, "topic": "finance"}' : "Enter JSON payload..."}
+                placeholder={method === "GET" ? '{"limit": 10}' : "Enter JSON payload..."}
               />
             </div>
 
