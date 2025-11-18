@@ -72,7 +72,10 @@ class ZapStreamAPIClient {
   private apiKey: string;
 
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_ZAPSTREAM_API_URL || 'http://localhost:8000';
+    this.baseURL =
+      process.env.NEXT_PUBLIC_ZAPSTREAM_API_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'http://localhost:8000';
     this.apiKey = process.env.NEXT_PUBLIC_ZAPSTREAM_API_KEY || 'dev_key_123';
   }
 

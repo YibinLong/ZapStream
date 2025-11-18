@@ -49,7 +49,10 @@ export function ApiPlayground() {
   const [lastRequest, setLastRequest] = useState<RequestDetails | null>(null)
   
   // Get the actual API URL and key being used (same as the API client)
-  const apiBaseURL = process.env.NEXT_PUBLIC_ZAPSTREAM_API_URL || 'http://localhost:8000'
+  const apiBaseURL =
+    process.env.NEXT_PUBLIC_ZAPSTREAM_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:8000'
   const apiKey = process.env.NEXT_PUBLIC_ZAPSTREAM_API_KEY || 'dev_key_123'
 
   const handleSendRequest = async () => {
