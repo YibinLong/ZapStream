@@ -79,6 +79,15 @@ class ZapStreamAPIClient {
     this.apiKey = process.env.NEXT_PUBLIC_ZAPSTREAM_API_KEY || 'dev_key_123';
   }
 
+  private isLocalApiHost(): boolean {
+    try {
+      const url = new URL(this.baseURL);
+      return url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    } catch {
+      return this.baseURL.includes('localhost');
+    }
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -190,6 +199,12 @@ class ZapStreamAPIClient {
   ): EventSource | null {
     // Server-Sent Events are not supported in all environments
     if (typeof EventSource === 'undefined') {
+      return null;
+    }
+
+    // API Gateway currently cannot keep long-lived SSE connections, so only
+    // enable this for local development.
+    if (!this.isLocalApiHost()) {
       return null;
     }
 

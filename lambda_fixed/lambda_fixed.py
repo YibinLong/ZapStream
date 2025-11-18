@@ -27,20 +27,20 @@ def normalize_event(item):
     """
     Normalize a DynamoDB record into the event payload expected by the UI.
 
-    DynamoDB can contain legacy or partially-written rows. This helper makes
-    sure that every event we return has the standard keys so one malformed row
-    does not break the entire response.
+    DynamoDB can contain legacy or partially-written rows. This helper validates
+    events to keep garbage rows from breaking the UI or showing red highlight
+    states.
     """
-    fallback_time = datetime.utcnow().isoformat()
-    payload = item.get('payload') or {}
-    created_at = (
-        item.get('created_at')
-        or item.get('timestamp')
-        or fallback_time
-    )
+    event_id = item.get('event_id')
+    created_at = item.get('created_at') or item.get('timestamp')
+    payload = item.get('payload')
+
+    # Skip malformed records that do not have the minimum shape
+    if not event_id or not created_at or payload is None:
+        return None
 
     return {
-        'event_id': item.get('event_id') or f"generated-{uuid.uuid4()}",
+        'event_id': event_id,
         'created_at': created_at,
         'source': item.get('source') or 'unknown',
         'type': item.get('type') or 'event',
@@ -80,8 +80,7 @@ def response(status_code, body, headers=None, cors_only=False):
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Idempotency-Key,Accept,Cache-Control',
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
-        'Access-Control-Max-Age': '86400',
-        'Access-Control-Allow-Credentials': 'true'
+        'Access-Control-Max-Age': '86400'
     })
 
     if cors_only:
@@ -212,7 +211,11 @@ def handler(event, context):
 
             response_data = table.scan(**scan_params)
 
-            events = [normalize_event(item) for item in response_data.get('Items', [])]
+            events = []
+            for item in response_data.get('Items', []):
+                normalized = normalize_event(item)
+                if normalized:
+                    events.append(normalized)
 
             # Sort events by created_at descending (newest first)
             events.sort(key=lambda x: x['created_at'], reverse=True)
@@ -256,6 +259,8 @@ def handler(event, context):
             sse_data = ""
             for item in response_data.get('Items', []):
                 normalized = normalize_event(item)
+                if not normalized:
+                    continue
                 event_data = {
                     'id': normalized['event_id'],
                     'event': 'message',

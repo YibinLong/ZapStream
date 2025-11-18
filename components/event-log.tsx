@@ -77,6 +77,8 @@ export function EventLog() {
   useEffect(() => {
     fetchEvents()
 
+    let pollInterval: ReturnType<typeof setInterval> | null = null
+
     const eventSource = zapStreamAPI.createEventStream(
       (newEvent) => {
         const convertedEvent = convertEvent(newEvent)
@@ -91,9 +93,20 @@ export function EventLog() {
       }
     )
 
+    if (!eventSource) {
+      // Fall back to simple polling when SSE isn't available (e.g. production)
+      setIsConnected(true)
+      pollInterval = setInterval(() => {
+        fetchEvents()
+      }, 15000)
+    }
+
     return () => {
       if (eventSource) {
         eventSource.close()
+      }
+      if (pollInterval) {
+        clearInterval(pollInterval)
       }
     }
   }, [fetchEvents])
