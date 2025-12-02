@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Script to package the ZapStream Lambda function.
+Run this from the project root: python scripts/package_lambda.py
 """
 import os
 import sys
@@ -9,9 +10,16 @@ import tempfile
 import shutil
 import zipfile
 
+# Get the project root directory (parent of scripts/)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+
 def create_lambda_zip():
     """Create a zip file for AWS Lambda deployment."""
-
+    
+    # Change to project root directory so all paths work correctly
+    os.chdir(PROJECT_ROOT)
+    
     # Install dependencies in a temporary directory
     with tempfile.TemporaryDirectory() as temp_dir:
         deps_dir = os.path.join(temp_dir, 'deps')
@@ -65,8 +73,8 @@ def create_lambda_zip():
                         arcname = os.path.join(root, file)
                         zipf.write(file_path, arcname)
 
-            # Add lambda handler
-            zipf.write('lambda_function.py', 'lambda_function.py')
+            # Add lambda handler (from lambda/ directory)
+            zipf.write('lambda/lambda_function.py', 'lambda_function.py')
 
             # Add __init__.py files to make packages
             zipf.writestr('__init__.py', '')

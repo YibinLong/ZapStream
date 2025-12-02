@@ -1,4 +1,9 @@
 const { chromium } = require('playwright');
+const path = require('path');
+
+// Get project root (parent of scripts/)
+const projectRoot = path.join(__dirname, '..');
+const screenshotsDir = path.join(projectRoot, 'test-screenshots');
 
 async function testZapStreamApp() {
   console.log('Starting ZapStream application test...');
@@ -17,7 +22,7 @@ async function testZapStreamApp() {
     await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
 
     // Take initial screenshot
-    await page.screenshot({ path: 'test-screenshots/01-initial-load.png', fullPage: true });
+    await page.screenshot({ path: path.join(screenshotsDir, '01-initial-load.png'), fullPage: true });
     console.log('   ✓ Initial page loaded successfully');
 
     // Test 2: Check page title
@@ -59,7 +64,7 @@ async function testZapStreamApp() {
     console.log(`   ✓ Playground tab: ${playgroundTab > 0 ? 'Found' : 'Not found'}`);
 
     // Take screenshot of main dashboard
-    await page.screenshot({ path: 'test-screenshots/02-dashboard-elements.png', fullPage: true });
+    await page.screenshot({ path: path.join(screenshotsDir, '02-dashboard-elements.png'), fullPage: true });
 
     // Test 4: Test clicking on Playground tab
     console.log('4. Testing Playground tab click...');
@@ -70,7 +75,7 @@ async function testZapStreamApp() {
       console.log('   ✓ Playground tab clicked successfully');
 
       // Take screenshot of playground tab
-      await page.screenshot({ path: 'test-screenshots/03-playground-tab.png', fullPage: true });
+      await page.screenshot({ path: path.join(screenshotsDir, '03-playground-tab.png'), fullPage: true });
     } else {
       console.log('   ✗ Playground tab not found');
     }
@@ -95,14 +100,14 @@ async function testZapStreamApp() {
       console.log('   ✓ First event clicked successfully');
 
       // Take screenshot after clicking event
-      await page.screenshot({ path: 'test-screenshots/04-event-expanded.png', fullPage: true });
+      await page.screenshot({ path: path.join(screenshotsDir, '04-event-expanded.png'), fullPage: true });
 
       // Click on another event if available
       if (eventCount > 1) {
         await eventButtons.nth(1).click();
         await page.waitForTimeout(500);
         console.log('   ✓ Second event clicked successfully');
-        await page.screenshot({ path: 'test-screenshots/05-second-event.png', fullPage: true });
+        await page.screenshot({ path: path.join(screenshotsDir, '05-second-event.png'), fullPage: true });
       }
     } else {
       console.log('   ✗ No events found in the log');
@@ -114,12 +119,12 @@ async function testZapStreamApp() {
     // Test different viewport sizes
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.waitForTimeout(500);
-    await page.screenshot({ path: 'test-screenshots/06-tablet-view.png', fullPage: true });
+    await page.screenshot({ path: path.join(screenshotsDir, '06-tablet-view.png'), fullPage: true });
     console.log('   ✓ Tablet view tested');
 
     await page.setViewportSize({ width: 375, height: 667 });
     await page.waitForTimeout(500);
-    await page.screenshot({ path: 'test-screenshots/07-mobile-view.png', fullPage: true });
+    await page.screenshot({ path: path.join(screenshotsDir, '07-mobile-view.png'), fullPage: true });
     console.log('   ✓ Mobile view tested');
 
     // Reset to desktop view
@@ -140,17 +145,17 @@ async function testZapStreamApp() {
     console.error('Test failed with error:', error);
 
     // Take screenshot of error state
-    await page.screenshot({ path: 'test-screenshots/error-state.png', fullPage: true });
+    await page.screenshot({ path: path.join(screenshotsDir, 'error-state.png'), fullPage: true });
   } finally {
     await browser.close();
     console.log('Browser closed. Test complete.');
   }
 }
 
-// Create screenshots directory
+// Create screenshots directory in project root
 const fs = require('fs');
-if (!fs.existsSync('test-screenshots')) {
-  fs.mkdirSync('test-screenshots');
+if (!fs.existsSync(screenshotsDir)) {
+  fs.mkdirSync(screenshotsDir, { recursive: true });
 }
 
 // Run the test

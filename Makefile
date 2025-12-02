@@ -80,7 +80,7 @@ test: ## Run all tests (frontend and backend)
 
 # Deployment (existing)
 deploy: ## Deploy frontend to AWS Amplify (existing script)
-	./deploy.sh
+	./scripts/deploy.sh
 
 # Maintenance
 clean: ## Clean up temporary files and caches
