@@ -1,19 +1,56 @@
 # ZapStream
 
-A real-time event ingestion and delivery API with a live dashboard. Think of it as infrastructure for Zapier-like workflows—you POST events, and your automations pull them from an inbox.
+A real-time event ingestion and delivery API with a live dashboard. Think of it as the backend infrastructure for Zapier-like automation workflows.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6)
 
-## What It Does
+## What Is This?
+
+ZapStream is an **event queue system** that lets applications send and receive events reliably. It solves the "how do I trigger automations when something happens?" problem.
+
+### The Problem It Solves
+
+When you're building integrations between services, you need a reliable way to:
+1. **Capture events** when things happen (payment received, user signed up, order shipped)
+2. **Store them safely** so nothing gets lost
+3. **Deliver them** to automation workflows exactly once
+
+ZapStream handles all of this with a simple REST API.
+
+### Use Cases
+
+- **Webhook aggregator** — Receive webhooks from multiple services (Stripe, GitHub, Shopify) and expose them through one unified API
+- **Event-driven automation** — Build workflows that trigger when specific events occur
+- **Microservice communication** — Decouple services with an event inbox pattern
+- **Integration platform** — Power a Zapier/Make-style automation tool
+
+### How It Works
+
+```
+Your App ──POST /events──▶ ZapStream ──GET /inbox──▶ Automation Worker
+                              │
+                              ▼
+                        Live Dashboard
+                     (monitor events in real-time)
+```
+
+1. **Send events** → Your app POSTs JSON events when things happen
+2. **Events queue up** → ZapStream stores them with tenant isolation
+3. **Workers pull events** → Automation systems fetch undelivered events from their inbox
+4. **Acknowledge when done** → Mark events as processed to prevent duplicates
+
+### Features
 
 - **Event Ingestion** → POST JSON events to `/events`, get back an event ID
 - **Event Inbox** → GET `/inbox` to pull undelivered events with filtering/pagination
 - **Event Management** → Acknowledge or delete events to prevent duplicates
-- **Real-time Streaming** → SSE endpoint for live event updates
-- **Multi-tenant** → API key-based isolation per tenant
+- **Real-time Streaming** → SSE endpoint for live event updates in the browser
+- **Multi-tenant** → API key-based isolation (each key = separate inbox)
+- **Idempotency** → Safe retries with `X-Idempotency-Key` header
+- **Rate Limiting** → Configurable per-key request limits
 
 ## Quick Start
 
